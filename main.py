@@ -1,31 +1,51 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-import prototype_jpeg
-from prototype_jpeg.utils import rgb2ycbcr
+from prototype_jpeg import compress, extract
+
 
 def main():
     with open('tests/images/rgb/Lena.raw', 'rb') as img_file:
-        original_img = np.fromfile(img_file, dtype=np.uint8)
-    original_img.shape = (512, 512, 3)
-    results = rgb2ycbcr(*(original_img[:, :, idx] for idx in range(3)))
-    show_raw_images(results.values(), (512, 512), grey_level=True)
+        img_arr = np.fromfile(img_file, dtype=np.uint8)
+        results = compress(
+            img_arr,
+            (512, 512),
+            grey_level=False,
+            subsampling_mode=1
+        )
+    # results = compress(
+    #     np.arange(512 * 512 * 3),
+    #     (512, 512),
+    #     grey_level=False,
+    #     subsampling_mode=1
+    # )
+    # show_raw_images(
+    #     results.values(),
+    #     ((512, 512), (256, 256), (256, 256)),
+    #     grey_level=True
+    # )
 
-def show_raw_images(images, size, titles=None, grey_level=False):
+
+def show_raw_images(images, sizes, titles=None, grey_level=False):
     if titles is None:
         titles = range(len(images))
     _, axarr = plt.subplots(1, len(images))
 
-    for idx, img in enumerate(images):
+    for idx, (img, size, title) in enumerate(zip(images, sizes, titles)):
         if isinstance(img, str):
             with open(img, 'rb') as img_file:
                 arr = np.fromfile(img_file, dtype=np.uint8)
         else:
             arr = np.array(img)
         arr.shape = size if grey_level else (*size, 3)
-        axarr[idx].set_title(titles[idx])
-        axarr[idx].imshow(arr, cmap='gray')
+        if len(images) == 1:
+            axarr.set_title(title)
+            axarr.imshow(arr, cmap='gray', vmin=0, vmax=255)
+        else:
+            axarr[idx].set_title(title)
+            axarr[idx].imshow(arr, cmap='gray', vmin=0, vmax=255)
     plt.show()
+
 
 if __name__ == '__main__':
     main()
