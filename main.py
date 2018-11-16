@@ -13,6 +13,8 @@ def main():
             grey_level=False,
             subsampling_mode=1
         )
+        with np.printoptions(precision=1, suppress=True):
+            print(results)
     # results = compress(
     #     np.arange(512 * 512 * 3),
     #     (512, 512),

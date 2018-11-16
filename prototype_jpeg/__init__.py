@@ -1,12 +1,14 @@
 import numpy as np
+from scipy.fftpack import dct
 
-from .utils import rgb2ycbcr, ycbcr2rgb, downsample, block_slice
+from .utils import rgb2ycbcr, ycbcr2rgb, downsample, block_slice, quantize
 
 
 #############################################################
 # Compress Algorithm:                                       #
 #       Color Space Conversion                              #
-#       Subsampling (Luminance and Chrominance)             #
+#       Subsampling (Chrominance)                           #
+#       Level Offset (Luminance)                            #
 #       For each color layer:                               #
 #           Pad layer to 8n * 8n                            #
 #           8*8 Slicing                                     #
@@ -17,7 +19,9 @@ from .utils import rgb2ycbcr, ycbcr2rgb, downsample, block_slice
 #############################################################
 
 # Header:
-#   Image Size (use this to identify which subsampling mode is used when decoding)
+#   Image Size
+#       - Get info about which subsampling mode is used
+#       - Get info about how many rows and cols are padded to 8N * 8N
 
 # Improvements:
 #   Multiprocessing for different blocks, DC and AC VLC
@@ -28,17 +32,20 @@ def compress(img_arr, size, quality=50, grey_level=False, subsampling_mode=1):
 
     if not grey_level:
         # Color Space Conversion with Level Offset
-        ycbcr = rgb2ycbcr(*(img_arr[:, :, idx] for idx in range(3)))
+        data = rgb2ycbcr(*(img_arr[:, :, idx] for idx in range(3)))
 
         # Subsampling
-        ycbcr['cb'] = downsample(ycbcr['cb'], subsampling_mode)
-        ycbcr['cr'] = downsample(ycbcr['cr'], subsampling_mode)
+        data['cb'] = downsample(data['cb'], subsampling_mode)
+        data['cr'] = downsample(data['cr'], subsampling_mode)
 
-        for key, layer in ycbcr.items():
+        # Level Offset
+        data['y'] = data['y'] - 128
+
+        for key, layer in data.items():
             nrows, ncols = layer.shape
 
             # Pad Layers to 8N * 8N
-            ycbcr[key] = np.pad(
+            data[key] = np.pad(
                 layer,
                 (
                     (0, (nrows // 8 + 1) * 8 - nrows if nrows % 8 else 0),
@@ -48,13 +55,25 @@ def compress(img_arr, size, quality=50, grey_level=False, subsampling_mode=1):
             )
 
             # Block Slicing
-            ycbcr[key] = block_slice(layer, 8, 8)
+            data[key] = block_slice(data[key], 8, 8)
+
+            for idx, block in enumerate(data[key]):
+                # 2D DCT
+                data[key][idx] = dct(
+                    dct(block, norm='ortho', axis=0),
+                    norm='ortho',
+                    axis=1
+                )
+
+                # Quantization
+                data[key][idx] = quantize(data[key][idx], key, quality=quality)
 
     else:
         pass
 
-    return ycbcr
+    return data
 
 
 def extract(filename):
     pass
+    # For IDCT: https://stackoverflow.com/questions/34890585/in-scipy-why-doesnt-idctdcta-equal-to-a
