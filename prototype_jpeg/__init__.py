@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.fftpack import dct
 
-from .utils import rgb2ycbcr, ycbcr2rgb, downsample, block_slice, quantize
+from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, block_slice, dct2d,
+                    idct2d, quantize)
 
 
 #############################################################
@@ -59,11 +60,7 @@ def compress(img_arr, size, quality=50, grey_level=False, subsampling_mode=1):
 
             for idx, block in enumerate(data[key]):
                 # 2D DCT
-                data[key][idx] = dct(
-                    dct(block, norm='ortho', axis=0),
-                    norm='ortho',
-                    axis=1
-                )
+                data[key][idx] = dct2d(block)
 
                 # Quantization
                 data[key][idx] = quantize(data[key][idx], key, quality=quality)

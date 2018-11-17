@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.fftpack import dct, idct
 
 
 def rgb2ycbcr(r, g, b):
@@ -64,6 +65,14 @@ def block_slice(arr, nrows, ncols):
     return (arr.reshape(h//nrows, nrows, -1, ncols)
                .swapaxes(1, 2)
                .reshape(-1, nrows, ncols))
+
+
+def dct2d(arr):
+    return dct(dct(arr, norm='ortho', axis=0), norm='ortho', axis=1)
+
+
+def idct2d(arr):
+    return idct(idct(arr, norm='ortho', axis=0), norm='ortho', axis=1)
 
 
 def quantize(block, block_type, quality=50):

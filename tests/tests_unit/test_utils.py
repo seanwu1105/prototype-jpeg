@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from prototype_jpeg.utils import (rgb2ycbcr, ycbcr2rgb, downsample,
-                                  upsample)
+                                  upsample, dct2d, idct2d)
 
 
 class TestColorSpaceConversion(unittest.TestCase):
@@ -142,3 +142,59 @@ class TestSampling(unittest.TestCase):
         for case in cases:
             result = upsample(case['input'], case['mode'])
             np.testing.assert_array_equal(result, case['expect'])
+
+
+class TestDCT2D(unittest.TestCase):
+    def test_dct2d(self):
+        test_input = np.array([
+            [139, 144, 149, 153, 155, 155, 155, 155],
+            [144, 151, 153, 156, 159, 156, 156, 156],
+            [150, 155, 160, 163, 158, 156, 156, 156],
+            [159, 161, 162, 160, 160, 159, 159, 159],
+            [159, 160, 161, 162, 162, 155, 155, 155],
+            [161, 161, 161, 161, 160, 157, 157, 157],
+            [162, 162, 161, 163, 162, 157, 157, 157],
+            [162, 162, 161, 161, 163, 158, 158, 158]
+        ])
+        expect = np.array([
+            [1260, -1, -12, -5, 2, -2, -3, 1],
+            [-23, -17, -6, -3, -3, -0, 0, -1],
+            [-11, -9, -2, 2, 0, -1, -1, -0],
+            [-7, -2, 0, 1, 1, -0, -0, 0],
+            [-1, -1, 1, 2, -0, -1, 1, 1],
+            [2, -0, 2, -0, -1, 1, 1, -1],
+            [-1, -0, -0, -1, -0, 2, 1, -1],
+            [-3, 2, -4, -2, 2, 1, -1, -0]
+        ])
+        np.testing.assert_array_almost_equal(
+            np.rint(dct2d(test_input)), expect)
+
+    def test_idct2d(self):
+        test_input = np.array([
+            [1260, -1, -12, -5, 2, -2, -3, 1],
+            [-23, -17, -6, -3, -3, -0, 0, -1],
+            [-11, -9, -2, 2, 0, -1, -1, -0],
+            [-7, -2, 0, 1, 1, -0, -0, 0],
+            [-1, -1, 1, 2, -0, -1, 1, 1],
+            [2, -0, 2, -0, -1, 1, 1, -1],
+            [-1, -0, -0, -1, -0, 2, 1, -1],
+            [-3, 2, -4, -2, 2, 1, -1, -0]
+        ])
+        expect = np.array([
+            [139, 145, 149, 153, 155, 155, 155, 154],
+            [144, 151, 153, 156, 159, 156, 156, 156],
+            [151, 155, 160, 163, 158, 156, 156, 156],
+            [159, 161, 162, 160, 160, 160, 159, 159],
+            [159, 160, 161, 162, 162, 155, 155, 155],
+            [161, 161, 161, 162, 160, 157, 157, 158],
+            [162, 163, 161, 163, 162, 157, 157, 157],
+            [162, 162, 161, 161, 163, 159, 158, 158]
+        ])
+        np.testing.assert_array_almost_equal(
+            np.rint(idct2d(test_input)),
+            expect
+        )
+
+    def test_invertible(self):
+        test_input = np.linspace(0, 255, 64, dtype=int).reshape(8, 8)
+        np.testing.assert_almost_equal(test_input, idct2d(dct2d(test_input)))
