@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from prototype_jpeg.utils import (rgb2ycbcr, ycbcr2rgb, downsample,
-                                  upsample, dct2d, idct2d)
+                                  upsample, dct2d, idct2d, quantize)
 
 
 class TestColorSpaceConversion(unittest.TestCase):
@@ -198,3 +198,88 @@ class TestDCT2D(unittest.TestCase):
     def test_invertible(self):
         test_input = np.linspace(0, 255, 64, dtype=int).reshape(8, 8)
         np.testing.assert_almost_equal(test_input, idct2d(dct2d(test_input)))
+
+
+class TestQuantization(unittest.TestCase):
+    def test_quantize(self):
+        test_input = np.array([
+            [236, -1, -12, -5, 2, -2, -3, 1],
+            [-23, -17, -6, -3, -3, 0, 0, -1],
+            [-11, -9, -2, 2, 0, -1, -1, 0],
+            [-7, -2, 0, 1, 1, 0, 0, 0],
+            [-1, -1, 1, 2, 0, -1, 1, 1],
+            [2, 0, 2, 0, -1, 1, 1, -1],
+            [-1, 0, 0, -1, 0, 2, 1, -1],
+            [-3, 2, -4, -2, 2, 1, -1, 0]
+        ])
+        expect = np.array([
+            [15, 0, -1, 0, 0, 0, 0, 0],
+            [-2, -1, 0, 0, 0, 0, 0, 0],
+            [-1, -1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0]
+        ])
+        np.testing.assert_almost_equal(
+            quantize(
+                test_input,
+                'y',
+                quality=50,
+                inverse=False
+            ),
+            expect,
+            decimal=0
+        )
+
+    def test_inverse_quantize(self):
+        test_input = np.array([
+            [15, 0, -1, 0, 0, 0, 0, 0],
+            [-2, -1, 0, 0, 0, 0, 0, 0],
+            [-1, -1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0]
+        ])
+        expect = np.array([
+            [240, 0, -10, 0, 0, 0, 0, 0],
+            [-24, -12, 0, 0, 0, 0, 0, 0],
+            [-14, -13, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0]
+        ])
+        np.testing.assert_almost_equal(
+            quantize(
+                test_input,
+                'y',
+                quality=50,
+                inverse=True
+            ),
+            expect,
+            decimal=0
+        )
+
+    def test_invertible(self):
+        test_input = np.array([
+            [236, -1, -12, -5, 2, -2, -3, 1],
+            [-23, -17, -6, -3, -3, 0, 0, -1],
+            [-11, -9, -2, 2, 0, -1, -1, 0],
+            [-7, -2, 0, 1, 1, 0, 0, 0],
+            [-1, -1, 1, 2, 0, -1, 1, 1],
+            [2, 0, 2, 0, -1, 1, 1, -1],
+            [-1, 0, 0, -1, 0, 2, 1, -1],
+            [-3, 2, -4, -2, 2, 1, -1, 0]
+        ])
+        np.testing.assert_array_almost_equal(
+            test_input,
+            quantize(
+                quantize(test_input, 'y', inverse=False),
+                'y', inverse=True
+            )
+        )
