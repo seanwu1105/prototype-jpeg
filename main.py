@@ -7,22 +7,20 @@ from prototype_jpeg import compress, extract
 def main():
     with open('tests/images/rgb/Lena.raw', 'rb') as img_file:
         img_arr = np.fromfile(img_file, dtype=np.uint8)
-        results = compress(
+        compressed = compress(
             img_arr,
             (512, 512),
             grey_level=False,
+            quality=50,
             subsampling_mode=1
         )
-        with np.printoptions(precision=1, suppress=True):
-            print(results)
-    # results = compress(
-    #     np.arange(512 * 512 * 3),
-    #     (512, 512),
-    #     grey_level=False,
-    #     subsampling_mode=1
-    # )
+        # with np.printoptions(suppress=True):
+        #     print(compressed)
+        extracted = extract(compressed)
+        with np.printoptions(suppress=True):
+            print(extracted)
     # show_raw_images(
-    #     results.values(),
+    #     compressed.values(),
     #     ((512, 512), (256, 256), (256, 256)),
     #     grey_level=True
     # )
