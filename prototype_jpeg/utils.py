@@ -89,6 +89,24 @@ def block_slice(arr, nrows, ncols):
                .reshape(-1, nrows, ncols))
 
 
+def block_combine(arr, nrows, ncols):
+    """Combine a list of blocks (m * n) into nrows * ncols 2D matrix.
+    
+    Arguments:
+        arr {3D np.array} -- A list of blocks in the format:
+            arr[# of block][block row size][block column size]
+        nrows {int} -- The target row size after combination.
+        ncols {int} -- The target column size after combination.
+    
+    Returns:
+        2D np.array -- Combined matrix.
+    """
+
+    print(nrows, ncols)
+
+    return arr
+
+
 def dct2d(arr):
     return dct(dct(arr, norm='ortho', axis=0), norm='ortho', axis=1)
 
@@ -98,7 +116,7 @@ def idct2d(arr):
 
 
 def quantize(block, block_type, quality=50, inverse=False):
-    if block_type == 'y' or block_type == 'luminance':
+    if block_type == 'y':
         quantization_table = LUMINANCE_QUANTIZATION_TABLE
     else:
         quantization_table = CHROMINANCE_QUANTIZATION_TABLE

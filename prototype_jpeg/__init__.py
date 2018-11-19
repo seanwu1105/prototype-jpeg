@@ -1,9 +1,11 @@
+import math
+
 import numpy as np
 from scipy.fftpack import dct
 
-from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, block_slice, dct2d,
-                    idct2d, quantize)
-from codec import encode, decode
+from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, block_slice,
+                    block_combine, dct2d, idct2d, quantize)
+from .codec import encode, decode
 
 
 #############################################################
@@ -23,10 +25,11 @@ from codec import encode, decode
 
 # Header:
 #   Image Size
-#       - Get info about which subsampling mode is used for extraction
 #       - Get info about how many rows and cols are padded to 8N * 8N for
 #         extraction
 #   Is Grey Level
+#   Subsampling Mode (This cannot be identified by image size as padding
+#       process increase the possibilities)
 #   Quality Factor
 
 # Improvements:
@@ -72,15 +75,26 @@ def compress(img_arr, size, quality=50, grey_level=False, subsampling_mode=1):
 
         # Entropy Encoder
         return encode(data)
-    
+
     # Grey Level Image
     raise NotImplementedError('Grey level image is not yet implemented.')
 
 
 def extract(byte_seq):
     # TODO: Read Header
+    size = (11, 20)
     grey_level = False
     quality = 50
+    subsampling_mode = 1
+
+    # Calculate the size after subsampling.
+    if subsampling_mode == 4:
+        subsampled_size = size
+    else:
+        subsampled_size = (
+            size[0] if subsampling_mode == 2 else school_round(size[0] / 2),
+            school_round(size[1] / 2)
+        )
 
     if not grey_level:
         # TODO: Entropy Decoder
@@ -95,27 +109,37 @@ def extract(byte_seq):
         for key, layer in data.items():
             for idx, block in enumerate(layer):
                 # Inverse Quantization
-                layer[idx] = quantize(block, key, quality=quality, inverse=True)
+                layer[idx] = quantize(
+                    block,
+                    key,
+                    quality=quality,
+                    inverse=True
+                )
 
                 # 2D IDCT
                 layer[idx] = idct2d(layer[idx])
 
+            # Calculate the size after subsampling and padding.
+            if key == 'y':
+                padded_size = ((s // 8 + 1) * 8 for s in size)
+            else:
+                padded_size = ((s // 8 + 1) * 8 for s in subsampled_size)
             # Combine the blocks into original image
-            # data[key] = block_combine(layer)
+            data[key] = block_combine(layer, *padded_size)
+
+        # Upsampling
+
+        # Clip Image
 
         # Inverse Level Offset
         # data['y'] = data['y'] + 128
 
-        # Upsampling
-
         # Color Space Conversion
 
-        # Clip Image
-        # XXX: This could be done after combine the blocks into original image
-        # to speed up the decoding process a little bit, but this would require
-        # further calculation about the "before upsampling padding sizes".
-
-
-
     return data
-    # For IDCT: https://stackoverflow.com/questions/34890585/in-scipy-why-doesnt-idctdcta-equal-to-a
+
+
+def school_round(val):
+    if float(val) % 1 >= 0.5:
+        return math.ceil(val)
+    return round(val)
