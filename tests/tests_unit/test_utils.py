@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 
-from prototype_jpeg.utils import (rgb2ycbcr, ycbcr2rgb, downsample,
-                                  upsample, dct2d, idct2d, quantize)
+from prototype_jpeg.utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample,
+                                  block_slice, block_combine, dct2d, idct2d, quantize)
 
 
 class TestColorSpaceConversion(unittest.TestCase):
@@ -144,6 +144,65 @@ class TestSampling(unittest.TestCase):
             np.testing.assert_array_equal(result, case['expect'])
 
 
+class TestBlockSlicingAndCombination(unittest.TestCase):
+    def test_block_slice(self):
+        test_input = np.arange(16).reshape(4, 4)
+        expect = np.array([
+            [[0, 1],
+             [4, 5]],
+            [[2, 3],
+             [6, 7]],
+            [[8, 9],
+             [12, 13]],
+            [[10, 11],
+             [14, 15]],
+        ])
+        np.testing.assert_array_equal(block_slice(test_input, 2, 2), expect)
+
+    def test_block_slice_individable(self):
+        """Test the block_slice function when the shape cannot be divided evenly
+        by nrows or ncols.
+        """
+        test_input = np.arange(16).reshape(4, 4)
+        with self.assertRaises(ValueError):
+            block_slice(test_input, 3, 3)
+
+    def test_block_combine(self):
+        test_input = np.array([
+            [[0, 1],
+             [4, 5]],
+            [[2, 3],
+             [6, 7]],
+            [[8, 9],
+             [12, 13]],
+            [[10, 11],
+             [14, 15]],
+        ])
+        expect = np.arange(16).reshape(4, 4)
+        np.testing.assert_array_equal(block_combine(test_input, 4, 4), expect)
+
+    def test_block_combine_inequal_number_of_elements(self):
+        test_input = np.array([
+            [[0, 1],
+             [4, 5]],
+            [[2, 3],
+             [6, 7]],
+            [[8, 9],
+             [12, 13]],
+            [[10, 11],
+             [14, 15]],
+        ])
+        with self.assertRaises(ValueError):
+            block_combine(test_input, 4, 3)
+
+    def test_invertible(self):
+        test_input = np.arange(64).reshape(8, 8)
+        np.testing.assert_array_equal(
+            test_input,
+            block_combine(block_slice(test_input, 2, 2), 8, 8)
+        )
+
+
 class TestDCT2D(unittest.TestCase):
     def test_dct2d(self):
         test_input = np.array([
@@ -167,7 +226,8 @@ class TestDCT2D(unittest.TestCase):
             [-3, 2, -4, -2, 2, 1, -1, -0]
         ])
         np.testing.assert_array_almost_equal(
-            np.rint(dct2d(test_input)), expect)
+            np.rint(dct2d(test_input)), expect
+        )
 
     def test_idct2d(self):
         test_input = np.array([

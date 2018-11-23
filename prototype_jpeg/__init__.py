@@ -3,7 +3,7 @@ import math
 import numpy as np
 from scipy.fftpack import dct
 
-from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, block_slice,
+from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
                     block_combine, dct2d, idct2d, quantize)
 from .codec import encode, decode
 
@@ -82,7 +82,7 @@ def compress(img_arr, size, quality=50, grey_level=False, subsampling_mode=1):
 
 def extract(byte_seq):
     # TODO: Read Header
-    size = (11, 20)
+    size = (512, 512)
     grey_level = False
     quality = 50
     subsampling_mode = 1
@@ -116,26 +116,41 @@ def extract(byte_seq):
                     inverse=True
                 )
 
-                # 2D IDCT
+                # 2D IDCT.
                 layer[idx] = idct2d(layer[idx])
 
             # Calculate the size after subsampling and padding.
             if key == 'y':
-                padded_size = ((s // 8 + 1) * 8 for s in size)
+                padded_size = ((s // 8 + 1) * 8 if s % 8 else s for s in size)
             else:
-                padded_size = ((s // 8 + 1) * 8 for s in subsampled_size)
+                padded_size = ((s // 8 + 1) * 8 if s % 8 else s
+                               for s in subsampled_size)
             # Combine the blocks into original image
             data[key] = block_combine(layer, *padded_size)
 
-        # Upsampling
-
-        # Clip Image
+        # Clip Padded Image
+        data['y'] = data['y'][:size[0], :size[1]]
+        data['cb'] = data['cb'][:subsampled_size[0], :subsampled_size[1]]
+        data['cr'] = data['cr'][:subsampled_size[0], :subsampled_size[1]]
 
         # Inverse Level Offset
-        # data['y'] = data['y'] + 128
+        data['y'] = data['y'] + 128
+
+        # Upsampling and Clipping
+        data['cb'] = upsample(data['cb'], subsampling_mode)[:size[0], :size[1]]
+        data['cr'] = upsample(data['cr'], subsampling_mode)[:size[0], :size[1]]
 
         # Color Space Conversion
+        data = ycbcr2rgb(**data)
 
+        # Rounding, Clipping and Flatten
+        data = {k: np.rint(np.clip(v, 0, 255)).flatten()
+                for k, v in data.items()}
+
+        # Combine layers into signle raw data.
+        data = (np.dstack((data['r'], data['g'], data['b']))
+               .flatten()
+               .astype(np.uint8))
     return data
 
 

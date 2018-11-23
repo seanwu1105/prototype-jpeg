@@ -5,26 +5,23 @@ from prototype_jpeg import compress, extract
 
 
 def main():
-    with open('tests/images/rgb/11x20.raw', 'rb') as img_file:
+    with open('tests/images/rgb/Baboon.raw', 'rb') as img_file:
         img_arr = np.fromfile(img_file, dtype=np.uint8)
-        show_raw_images([img_arr], [(11, 20)])
         compressed = compress(
             img_arr,
-            (11, 20),
+            (512, 512),
             grey_level=False,
             quality=50,
             subsampling_mode=1
         )
         extracted = extract(compressed)
         # with np.printoptions(suppress=True):
-        #     print(compressed)
-        # show_raw_images(
-        #     compressed.values(),
-        #     ((10, 10), (5, 5), (5, 5)),
-        #     grey_level=True
-        # )
-        # with np.printoptions(suppress=True):
         #     print(extracted)
+        show_raw_images(
+            (img_arr, extracted),
+            ((512, 512), (512, 512)),
+            ('Original', 'Compressed and Extracted')
+        )
 
 
 def show_raw_images(images, sizes, titles=None, grey_level=False):

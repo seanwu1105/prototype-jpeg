@@ -25,6 +25,20 @@ CHROMINANCE_QUANTIZATION_TABLE = np.array([
 
 
 def rgb2ycbcr(r, g, b):
+    """Convert RGB to YCbCr.
+
+    The range of R, G, B should be [0, 255]. The range of Y, Cb, Cr is [0, 255],
+    [-128, 128], [-128, 128] respectively.
+
+    Arguments:
+        r {np.ndarray} -- Red Layer.
+        g {np.ndarray} -- Green Layer.
+        b {np.ndarray} -- Blue Layer.
+
+    Returns:
+        dict -- A dictionary containing Y, Cb, Cr layers.
+    """
+
     return {
         'y': + 0.299 * r + 0.587 * g + 0.114 * b,
         'cb': - 0.168736 * r - 0.331264 * g + 0.5 * b,
@@ -33,6 +47,20 @@ def rgb2ycbcr(r, g, b):
 
 
 def ycbcr2rgb(y, cb, cr):
+    """Convert YCbCr to RGB.
+
+    The range of Y, Cb, Cr should be [0, 255], [-128, 128], [-128, 128]
+    respectively. The range of R, G, B is [0, 255].
+
+    Arguments:
+        y {np.ndarray} -- Luminance Layer.
+        cb {np.ndarray} -- Chrominance (Cb) Layer.
+        cr {np.ndarray} -- Chrominance (Cr) Layer.
+
+    Returns:
+        dict -- A dictionary containing R, G, B layers.
+    """
+
     return {
         'r': y + 1.402 * cr,
         'g': y - 0.344136 * cb - 0.714136 * cr,
@@ -91,20 +119,28 @@ def block_slice(arr, nrows, ncols):
 
 def block_combine(arr, nrows, ncols):
     """Combine a list of blocks (m * n) into nrows * ncols 2D matrix.
-    
+
     Arguments:
         arr {3D np.array} -- A list of blocks in the format:
             arr[# of block][block row size][block column size]
         nrows {int} -- The target row size after combination.
         ncols {int} -- The target column size after combination.
-    
+
     Returns:
         2D np.array -- Combined matrix.
+
+    Raise:
+        ValueError -- The size of `arr` is not equal to `nrows * ncols`.
     """
 
-    print(nrows, ncols)
+    if arr.size != nrows * ncols:
+        raise ValueError('The size of arr should be equal to nrows * ncols')
 
-    return arr
+    _, block_nrows, block_ncols = arr.shape
+
+    return (arr.reshape(nrows // block_nrows, -1, block_nrows, block_ncols)
+            .swapaxes(1, 2)
+            .reshape(nrows, ncols))
 
 
 def dct2d(arr):
