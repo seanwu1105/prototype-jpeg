@@ -36,8 +36,10 @@ from .codec import encode, decode
 #   Multiprocessing for different blocks, DC and AC VLC
 
 
-def compress(img_arr, size, quality=50, grey_level=False, subsampling_mode=1):
-    img_arr.shape = size if grey_level else (*size, 3)
+def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
+    img_arr = np.fromfile(byte_seq, dtype=np.uint8).reshape(
+        size if grey_level else (*size, 3)
+    )
 
     if not grey_level:
         # Color Space Conversion (w/o Level Offset)
@@ -70,8 +72,12 @@ def compress(img_arr, size, quality=50, grey_level=False, subsampling_mode=1):
                 # 2D DCT
                 data[key][idx] = dct2d(block)
 
-                # Quantization
-                data[key][idx] = quantize(data[key][idx], key, quality=quality)
+                # Quantization and Rounding
+                data[key][idx] = np.rint(quantize(
+                    data[key][idx],
+                    key,
+                    quality=quality)
+                )
 
         # Entropy Encoder
         return encode(data)
@@ -149,8 +155,8 @@ def extract(byte_seq):
 
         # Combine layers into signle raw data.
         data = (np.dstack((data['r'], data['g'], data['b']))
-               .flatten()
-               .astype(np.uint8))
+                .flatten()
+                .astype(np.uint8))
     return data
 
 

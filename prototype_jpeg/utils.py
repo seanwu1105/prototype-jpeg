@@ -28,7 +28,7 @@ def rgb2ycbcr(r, g, b):
     """Convert RGB to YCbCr.
 
     The range of R, G, B should be [0, 255]. The range of Y, Cb, Cr is [0, 255],
-    [-128, 128], [-128, 128] respectively.
+    [-128, 127], [-128, 127] respectively.
 
     Arguments:
         r {np.ndarray} -- Red Layer.
@@ -49,7 +49,7 @@ def rgb2ycbcr(r, g, b):
 def ycbcr2rgb(y, cb, cr):
     """Convert YCbCr to RGB.
 
-    The range of Y, Cb, Cr should be [0, 255], [-128, 128], [-128, 128]
+    The range of Y, Cb, Cr should be [0, 255], [-128, 127], [-128, 127]
     respectively. The range of R, G, B is [0, 255].
 
     Arguments:

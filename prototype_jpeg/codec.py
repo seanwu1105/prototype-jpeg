@@ -1,4 +1,13 @@
+class Encoder:
+    def __init__(self, data):
+        pass
+
+class Decoder:
+    def __init__(self, byte_seq):
+        pass
+
 def encode(data):
+    # print(data)
     return data
 
 def decode(byte_seq):
