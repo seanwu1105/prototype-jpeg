@@ -1,3 +1,3 @@
 # Prototype JPEG
 
-An prototype JPEG compressor in Python.
+A prototype JPEG compressor in Python.

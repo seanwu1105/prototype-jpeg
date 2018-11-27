@@ -282,4 +282,21 @@ class TestRunLengthCoding(unittest.TestCase):
 
 class TestHuffmanCategoryCodewordTableUniqueness(unittest.TestCase):
     def test_dc_luminance(self):
+        # Step 1. Examine all paris of codewords to see if any codeword is a
+        #         prefix of another.
+        # Step 2. Whenever we find such a pair, add the dangling suffix to the
+        #         list (unless it's already added).
+        # Step 3. Repeat step 2. and 3. until
+        #           Get a dangling suffix that is a codeword in the original
+        #               list. --> NOT uniquely decodable.
+        #           No more unique dangling suffix --> uniquely decodable.
+        temp_input = ('0', '01', '11')
+
+    def test_dc_chrominance(self):
+        pass
+
+    def test_ac_luminance(self):
+        pass
+
+    def test_ac_chrominance(self):
         pass
