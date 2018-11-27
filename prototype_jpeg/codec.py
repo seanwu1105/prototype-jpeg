@@ -1,5 +1,7 @@
 import collections
 import itertools
+import functools
+import operator
 
 from bitarray import bitarray as b
 import numpy as np
@@ -39,22 +41,79 @@ class Encoder:
             self._get_diff_dc()
         return self._diff_dc
 
+    @diff_dc.setter
+    def diff_dc(self, value):
+        self._diff_dc = value
+
     @property
     def run_length_ac(self):
         if self._run_length_ac is None:
             self._get_run_length_ac()
         return self._run_length_ac
 
+    @run_length_ac.setter
+    def run_length_ac(self, value):
+        self._run_length_ac = value
+
     def encode(self):
-        # TODO: encode DCC and ACC and return a dict.
-        pass
+        """Encode differential DC and run-length-encoded AC with baseline JPEG
+        Huffman table.
+        
+        Returns:
+            dict -- A dictionary containing DC and AC with luminance and
+                chrominance encoded layers. The format is:
+                ```
+                ret = {
+                    DC: {
+                        LUMINANCE: bitarray('...')
+                        CHROMINANCE: bitarray('...')
+                    }
+                    AC: {
+                        LUMINANCE: bitarray('...')
+                        CHROMINANCE: bitarray('...')
+                    }
+                }
+                ```
+        """
+
+        # RETURNVALUE = 
+        ret = {
+            DC: {},
+            AC: {}
+        }
+        for layer_type in (LUMINANCE, CHROMINANCE):
+            ret[DC][layer_type] = functools.reduce(
+                operator.add,
+                (encode_huffman(v, layer_type)
+                 for v in self.diff_dc[layer_type])
+            )
+            ret[AC][layer_type] = functools.reduce(
+                operator.add,
+                (encode_huffman(v, layer_type)
+                 for v in self.run_length_ac[layer_type])
+            )
+        return ret
 
     def _get_diff_dc(self):
+        """Calculate the differential DC in the following format.
+        self._diff_dc = OrderedDict{
+            LUMINANCE: (tuple of integers),
+            CHROMINANCE: (tuple of intergers)
+        }
+        """
+
         self._diff_dc = collections.OrderedDict(((
             k, encode_differential(l[:, 0, 0])
         ) for k, l in self.data.items()))
 
     def _get_run_length_ac(self):
+        """Calculate the run-length-encoded AC in the following format.
+        self._run_length_ac = OrderedDict{
+            LUMINANCE: (list of integers),
+            CHROMINANCE: (list of integers)
+        }
+        """
+
         self._run_length_ac = collections.OrderedDict()
         for key, layer in self.data.items():
             seq = []
@@ -138,7 +197,7 @@ def encode_run_length(seq):
     groups = [(len(tuple(group)), key)
               for key, group in itertools.groupby(seq)]
     ret = []
-    borrow = False # Borrow one pair in the next group whose key is nonzero.
+    borrow = False  # Borrow one pair in the next group whose key is nonzero.
     if groups[-1][1] == 0:
         del groups[-1]
     for idx, (length, key) in enumerate(groups):

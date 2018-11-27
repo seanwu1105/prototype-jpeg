@@ -1,6 +1,7 @@
 import collections
 import itertools
 import unittest
+from unittest import mock
 
 from bitarray import bitarray as b
 import numpy as np
@@ -125,7 +126,7 @@ class TestEncoder(unittest.TestCase):
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
+                 [0, 99, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
@@ -147,23 +148,52 @@ class TestEncoder(unittest.TestCase):
                 (0, 1), (0, 1), (3, -1), ZRL, ZRL, ZRL, (8, -99), EOB
             ]), (
             CHROMINANCE, [
-                (1, 1), EOB,
+                (1, 1), ZRL, (0, 99), EOB,
                 (0, -1), (0, -1), (1, 1), EOB
             ])))
         self.assertDictEqual(Encoder(data).run_length_ac, expect)
 
     def test_encode(self):
-        # XXX: Remember to test multiple ZRL!
-        test_diff_dc = (30, 0, -6)
-        test_run_length_ac = (
-            (0, 1), (0, 1), (3, -1), EOB,
-            (0, 1), (56, -99), EOB,
-            EOB
-        )
+        test_diff_dc = collections.OrderedDict((
+            (LUMINANCE, (63, 2, -7, 3)),
+            (CHROMINANCE, (15, 7))
+        ))
+        test_run_length_ac = collections.OrderedDict(((
+            LUMINANCE, [
+                (0, -1), (2, -1), (0, 2), EOB,
+                (1, -2), ZRL, (1, -1), EOB,
+                (2, -1), ZRL, (0, -1), EOB,
+                ZRL, ZRL, (1, 1), EOB
+            ]), (
+            CHROMINANCE, [
+                (0, 1), ZRL, ZRL, (2, -1), EOB,
+                EOB
+            ]
+        )))
         expect = {
-            'dc': b(''),
-            'ac': b('')
+            DC: {
+                LUMINANCE: b('1110111111 01110 100000 01111'.replace(' ', '')),
+                CHROMINANCE: b('11101111 110111'.replace(' ', ''))
+            },
+            AC: {
+                LUMINANCE: b(''.join((
+                    '000', '111000', '0110', '1010',
+                    '1101101', '11111111001', '11000', '1010',
+                    '111000', '11111111001', '000', '1010',
+                    '11111111001', '11111111001', '11001', '1010'
+                ))),
+                CHROMINANCE: b(''.join((
+                    '011', '1111111010', '1111111010', '110100', '00',
+                    '00'
+                )))
+            }
         }
+        with mock.patch.object(Encoder, '__init__') as mock_Encoder_init:
+            mock_Encoder_init.return_value = None
+            encoder = Encoder(None)
+            encoder.diff_dc = test_diff_dc
+            encoder.run_length_ac = test_run_length_ac
+            self.assertDictEqual(encoder.encode(), expect)
 
 
 class TestDecoder(unittest.TestCase):

@@ -3,6 +3,7 @@ import math
 import numpy as np
 from scipy.fftpack import dct
 
+from .codec import DC, AC, LUMINANCE, CHROMINANCE
 from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
                     block_combine, dct2d, idct2d, quantize)
 # from .codec import encode, decode
@@ -94,6 +95,23 @@ def extract(byte_seq):
     grey_level = False
     quality = 50
     subsampling_mode = 1
+    # IF RGB #########################################
+    positions = {
+        DC: {
+            LUMINANCE: int,
+            CHROMINANCE: int
+        },
+        AC: {
+            LUMINANCE: int,
+            CHROMINANCE: int
+        }
+    }
+    # IF GREY LEVEL ##################################
+    positions = { # Only LUMINANCE encoding table is used.
+        DC: int,
+        AC: int
+    }
+    ##################################################
 
     # Calculate the size after subsampling.
     if subsampling_mode == 4:
@@ -103,9 +121,6 @@ def extract(byte_seq):
             size[0] if subsampling_mode == 2 else school_round(size[0] / 2),
             school_round(size[1] / 2)
         )
-
-    # TODO: Calculate the # of blocks for each layer to identify luminance and
-    # chrominance part in bitarray.
 
     if not grey_level:
         # TODO: Entropy Decoder
