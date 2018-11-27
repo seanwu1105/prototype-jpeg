@@ -50,14 +50,48 @@ class Decoder:
         # value code word (bits with size, index of category).
 
 
-def encode_huffman(val, value_type, layer_type):
-    if val <= -2048 or val >= 2048:
-        raise ValueError('Differential DC should be within [-2047, 2047].')
-    size, diff_idx = index_2d(HUFFMAN_CATEGORIES, val)
-    if size == 0:
-        return b(HUFFMAN_CATEGORY_CODEWORD[value_type][layer_type][size])
-    return b(HUFFMAN_CATEGORY_CODEWORD[value_type][layer_type][size]
-             + '{:0{padding}b}'.format(diff_idx, padding=size))
+def encode_huffman(value, layer_type):
+    """Encode the Huffman coding of value.
+
+    Arguments:
+        value {int or tuple} -- Differential DC (int) or run-length AC (tuple).
+        layer_type {LUMINANCE or CHROMINANCE} -- Specify the table of certain
+            layer.
+
+    Raises:
+        ValueError -- When the value is out of the range.
+
+    Returns:
+        bitarray -- Huffman encoded bit array.
+    """
+
+    if isinstance(value, int):  # DC
+        if value <= -2048 or value >= 2048:
+            raise ValueError(
+                f'Differential DC {value} should be within [-2047, 2047].'
+            )
+
+        size, fixed_code_idx = index_2d(HUFFMAN_CATEGORIES, value)
+
+        if size == 0:
+            return b(HUFFMAN_CATEGORY_CODEWORD[DC][layer_type][size])
+        return b(HUFFMAN_CATEGORY_CODEWORD[DC][layer_type][size]
+                 + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
+    else:   # AC
+        value = tuple(value)
+        if value == EOB or value == ZRL:
+            return b(HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][value])
+
+        run, nonzero = value
+        if nonzero == 0 or nonzero <= -1024 or nonzero >= 1024:
+            raise ValueError(
+                f'AC coefficient nonzero {value} should be within [-1023, 0) '
+                'or (0, 1023].'
+            )
+
+        size, fixed_code_idx = index_2d(HUFFMAN_CATEGORIES, nonzero)
+        return b(HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][(run, size)]
+                 + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
 
 
 def encode_differential(seq):
@@ -193,7 +227,8 @@ HUFFMAN_CATEGORY_CODEWORD = {
     },
     AC: {
         LUMINANCE: {
-            EOB: '1010', # (0, 0)
+            EOB: '1010',  # (0, 0)
+            ZRL: '11111111001',  # (F, 0)
 
             (0, 1):  '00',
             (0, 2):  '01',
@@ -369,12 +404,11 @@ HUFFMAN_CATEGORY_CODEWORD = {
             (15, 7):  '1111111111111011',
             (15, 8):  '1111111111111100',
             (15, 9):  '1111111111111101',
-            (15, 10): '1111111111111110',
-
-            ZRL: '11111111001' # (F, 0)
+            (15, 10): '1111111111111110'
         },
         CHROMINANCE: {
-            EOB: '00',
+            EOB: '00',  # (0, 0)
+            ZRL: '1111111010',  # (F, 0)
 
             (0, 1):  '01',
             (0, 2):  '100',
@@ -550,9 +584,7 @@ HUFFMAN_CATEGORY_CODEWORD = {
             (15, 7):  '1111111111111011',
             (15, 8):  '1111111111111100',
             (15, 9):  '1111111111111101',
-            (15, 10): '1111111111111110',
-
-            ZRL: '1111111010'
+            (15, 10): '1111111111111110'
         }
     }
 }

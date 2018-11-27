@@ -7,7 +7,7 @@ import numpy as np
 from prototype_jpeg.codec import (
     Encoder, Decoder, encode_huffman, encode_differential, decode_differential,
     iter_zig_zag, inverse_iter_zig_zag, encode_run_length, decode_run_length,
-    EOB, DC, AC, LUMINANCE, CHROMINANCE, HUFFMAN_CATEGORY_CODEWORD
+    EOB, ZRL, DC, AC, LUMINANCE, CHROMINANCE, HUFFMAN_CATEGORY_CODEWORD
 )
 
 
@@ -161,16 +161,16 @@ class TestHuffmanEncoding(unittest.TestCase):
             b('11111011111111'), b('1111110111111111'), b('111111101111111111'),
             b('11111111011111111111')
         )
-        for codeword, expect in zip(test_categories, expect_categories):
-            self.assertEqual(encode_huffman(codeword, DC, LUMINANCE),
+        for diff_dc, expect in zip(test_categories, expect_categories):
+            self.assertEqual(encode_huffman(diff_dc, LUMINANCE),
                              expect)
         test_diff_values = (-3, -2, -1, 0, 1, 2, 3)
         expect_diff_values = (
             b('01100'), b('01101'), b('0100'),
             b('00'), b('0101'), b('01110'), b('01111')
         )
-        for codeword, expect in zip(test_diff_values, expect_diff_values):
-            self.assertEqual(encode_huffman(codeword, DC, LUMINANCE),
+        for diff_dc, expect in zip(test_diff_values, expect_diff_values):
+            self.assertEqual(encode_huffman(diff_dc, LUMINANCE),
                              expect)
 
     def test_encode_diff_dc_chrominance_codeword(self):
@@ -188,8 +188,8 @@ class TestHuffmanEncoding(unittest.TestCase):
             b('111111110111111111'), b('11111111101111111111'),
             b('1111111111011111111111')
         )
-        for codeword, expect in zip(test_categories, expect_categories):
-            self.assertEqual(encode_huffman(codeword, DC, CHROMINANCE),
+        for diff_dc, expect in zip(test_categories, expect_categories):
+            self.assertEqual(encode_huffman(diff_dc, CHROMINANCE),
                              expect)
 
         test_diff_values = (-3, -2, -1, 0, 1, 2, 3)
@@ -197,15 +197,53 @@ class TestHuffmanEncoding(unittest.TestCase):
             b('1000'), b('1001'), b('010'),
             b('00'), b('011'), b('1010'), b('1011')
         )
-        for codeword, expect in zip(test_diff_values, expect_diff_values):
-            self.assertEqual(encode_huffman(codeword, DC, CHROMINANCE),
+        for diff_dc, expect in zip(test_diff_values, expect_diff_values):
+            self.assertEqual(encode_huffman(diff_dc, CHROMINANCE),
                              expect)
 
     def test_encode_diff_dc_out_of_range(self):
         test_inputs = (-2048, 2048)
         for val in test_inputs:
             with self.assertRaises(ValueError):
-                encode_huffman(val, DC, LUMINANCE)
+                encode_huffman(val, LUMINANCE)
+            with self.assertRaises(ValueError):
+                encode_huffman(val, CHROMINANCE)
+
+    def test_encode_ac_coef_luminance_codeword(self):
+        test_inputs = ((1, -2), (0, -1), (2, -1), ZRL, (15, -1023), EOB)
+        expects = (
+            b('1101101'), b('000'), b('111000'), b('11111111001'),
+            b('11111111111111100000000000'), b('1010')
+        )
+        for ac_coef, expect in zip(test_inputs, expects):
+            self.assertEqual(encode_huffman(ac_coef, LUMINANCE),
+                             expect)
+
+    def test_encode_ac_coef_chrominance_codeword(self):
+        test_inputs = ((1, -2), (0, 1), ZRL, (10, 1023), EOB)
+        expects = (
+            b('11100101'), b('011'), b('1111111010'),
+            b('11111111110100011111111111'), b('00')
+        )
+        for ac_coef, expect in zip(test_inputs, expects):
+            self.assertEqual(encode_huffman(ac_coef, CHROMINANCE),
+                             expect)
+
+    def test_encode_ac_coef_out_of_range(self):
+        test_inputs = ((1, 0), (0, -1024), (0, 1024))
+        for val in test_inputs:
+            with self.assertRaises(ValueError):
+                encode_huffman(val, LUMINANCE)
+            with self.assertRaises(ValueError):
+                encode_huffman(val, CHROMINANCE)
+
+    def test_encode_ac_coef_cannot_find_in_table(self):
+        test_inputs = ((16, 1), (-1, 1))
+        for val in test_inputs:
+            with self.assertRaises(KeyError):
+                encode_huffman(val, LUMINANCE)
+            with self.assertRaises(KeyError):
+                encode_huffman(val, CHROMINANCE)
 
 
 class TestDifferentialCoding(unittest.TestCase):
