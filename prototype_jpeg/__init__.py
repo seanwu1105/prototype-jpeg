@@ -5,7 +5,7 @@ from scipy.fftpack import dct
 
 from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
                     block_combine, dct2d, idct2d, quantize)
-from .codec import encode, decode
+# from .codec import encode, decode
 
 
 #############################################################
@@ -72,15 +72,17 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
                 # 2D DCT
                 data[key][idx] = dct2d(block)
 
-                # Quantization and Rounding
-                data[key][idx] = np.rint(quantize(
-                    data[key][idx],
-                    key,
-                    quality=quality)
-                )
-
+                # Quantization
+                data[key][idx] = quantize(data[key][idx], key, quality=quality)
+            
+            # Rounding
+            data[key] = np.rint(data[key]).astype(int)
         # Entropy Encoder
-        return encode(data)
+        # encode(data)
+
+        # Insert Header
+
+        return data
 
     # Grey Level Image
     raise NotImplementedError('Grey level image is not yet implemented.')
@@ -104,7 +106,8 @@ def extract(byte_seq):
 
     if not grey_level:
         # TODO: Entropy Decoder
-        data = decode(byte_seq)
+        data = byte_seq
+        # data = decode(byte_seq)
         #   Do something to get decoded data having the following format:
         #   data = {
         #       'y': array_of_blocks,
@@ -154,7 +157,7 @@ def extract(byte_seq):
                 for k, v in data.items()}
 
         # Combine layers into signle raw data.
-        data = (np.dstack((data['r'], data['g'], data['b']))
+        data = (np.dstack((data.values()))
                 .flatten()
                 .astype(np.uint8))
     return data
