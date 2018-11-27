@@ -104,6 +104,9 @@ def extract(byte_seq):
             school_round(size[1] / 2)
         )
 
+    # TODO: Calculate the # of blocks for each layer to identify luminance and
+    # chrominance part in bitarray.
+
     if not grey_level:
         # TODO: Entropy Decoder
         data = byte_seq

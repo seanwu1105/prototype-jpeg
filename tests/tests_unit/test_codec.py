@@ -1,3 +1,4 @@
+import collections
 import itertools
 import unittest
 
@@ -13,8 +14,8 @@ from prototype_jpeg.codec import (
 
 class TestEncoder(unittest.TestCase):
     def test_init_diff_dc(self):
-        data = {
-            'y': np.array([
+        data = collections.OrderedDict((
+            ('y', np.array([
                 [[14, 1, 0, -1, 0, 0, 0, 0],
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -39,8 +40,8 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
-            ]),
-            'cb': np.array([
+            ])),
+            ('cb', np.array([
                 [[-14, 0, 0, 0, 0, 0, 0, 0],
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -65,8 +66,8 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
-            ]),
-            'cr': np.array([
+            ])),
+            ('cr', np.array([
                 [[22, 1, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -91,14 +92,17 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
-            ])
-        }
-        expect = [14, 30, -38, -20, 20, -6, 22, -11, 6]
-        self.assertSequenceEqual(Encoder(data).diff_dc, expect)
+            ]))
+        ))
+        expect = collections.OrderedDict((
+            (LUMINANCE, (14, 30, -38)),
+            (CHROMINANCE, (-14, 20, -6, 22, -11, 6))
+        ))
+        self.assertDictEqual(Encoder(data).diff_dc, expect)
 
     def test_init_run_length_ac(self):
-        data = {
-            'y': np.array([
+        data = collections.OrderedDict((
+            ('y', np.array([
                 [[14, 1, 0, -1, 0, 0, 0, 0],
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -106,9 +110,17 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0]]
-            ]),
-            'cb': np.array([
+                 [0, 0, 0, 0, 0, 0, 0, 0]],
+                [[14, 1, 0, -1, 0, 0, 0, 0],
+                 [1, 0, 0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0, 0, 0],
+                 [0, 0, 0, 0, 0, 0, 0, -99]]
+            ])),
+            ('cb', np.array([
                 [[-14, 0, 0, 0, 0, 0, 0, 0],
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -117,8 +129,8 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
-            ]),
-            'cr': np.array([
+            ])),
+            ('cr', np.array([
                 [[17, -1, 0, 0, 0, 0, 0, 0],
                  [-1, 1, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -127,18 +139,31 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
-            ])
-        }
-        expect = [
-            [(0, 1), (0, 1), (3, -1), EOB],
-            [(1, 1), EOB],
-            [(0, -1), (0, -1), (1, 1), EOB]
-        ]
-        self.assertSequenceEqual(Encoder(data).run_length_ac, expect)
+            ]))
+        ))
+        expect = collections.OrderedDict(((
+            LUMINANCE, [
+                (0, 1), (0, 1), (3, -1), EOB,
+                (0, 1), (0, 1), (3, -1), ZRL, ZRL, ZRL, (8, -99), EOB
+            ]), (
+            CHROMINANCE, [
+                (1, 1), EOB,
+                (0, -1), (0, -1), (1, 1), EOB
+            ])))
+        self.assertDictEqual(Encoder(data).run_length_ac, expect)
 
     def test_encode(self):
         # XXX: Remember to test multiple ZRL!
-        pass
+        test_diff_dc = (30, 0, -6)
+        test_run_length_ac = (
+            (0, 1), (0, 1), (3, -1), EOB,
+            (0, 1), (56, -99), EOB,
+            EOB
+        )
+        expect = {
+            'dc': b(''),
+            'ac': b('')
+        }
 
 
 class TestDecoder(unittest.TestCase):
@@ -209,27 +234,27 @@ class TestHuffmanEncoding(unittest.TestCase):
             with self.assertRaises(ValueError):
                 encode_huffman(val, CHROMINANCE)
 
-    def test_encode_ac_coef_luminance_codeword(self):
+    def test_encode_run_length_ac_luminance_codeword(self):
         test_inputs = ((1, -2), (0, -1), (2, -1), ZRL, (15, -1023), EOB)
         expects = (
             b('1101101'), b('000'), b('111000'), b('11111111001'),
             b('11111111111111100000000000'), b('1010')
         )
-        for ac_coef, expect in zip(test_inputs, expects):
-            self.assertEqual(encode_huffman(ac_coef, LUMINANCE),
+        for run_length_ac, expect in zip(test_inputs, expects):
+            self.assertEqual(encode_huffman(run_length_ac, LUMINANCE),
                              expect)
 
-    def test_encode_ac_coef_chrominance_codeword(self):
+    def test_encode_run_length_ac_chrominance_codeword(self):
         test_inputs = ((1, -2), (0, 1), ZRL, (10, 1023), EOB)
         expects = (
             b('11100101'), b('011'), b('1111111010'),
             b('11111111110100011111111111'), b('00')
         )
-        for ac_coef, expect in zip(test_inputs, expects):
-            self.assertEqual(encode_huffman(ac_coef, CHROMINANCE),
+        for run_length_ac, expect in zip(test_inputs, expects):
+            self.assertEqual(encode_huffman(run_length_ac, CHROMINANCE),
                              expect)
 
-    def test_encode_ac_coef_out_of_range(self):
+    def test_encode_run_length_ac_out_of_range(self):
         test_inputs = ((1, 0), (0, -1024), (0, 1024))
         for val in test_inputs:
             with self.assertRaises(ValueError):
@@ -237,7 +262,7 @@ class TestHuffmanEncoding(unittest.TestCase):
             with self.assertRaises(ValueError):
                 encode_huffman(val, CHROMINANCE)
 
-    def test_encode_ac_coef_cannot_find_in_table(self):
+    def test_encode_run_length_ac_cannot_find_in_table(self):
         test_inputs = ((16, 1), (-1, 1))
         for val in test_inputs:
             with self.assertRaises(KeyError):
@@ -296,23 +321,32 @@ class TestZigZag(unittest.TestCase):
 
 class TestRunLengthCoding(unittest.TestCase):
     def test_run_length_encode(self):
-        test_input = (0, -2, -1, -1, -1, 0, 0, -1, -1, 0, 0, 0)
-        expect = [(1, -2), (0, -1), (0, -1), (0, -1), (2, -1), (0, -1), EOB]
-        self.assertSequenceEqual(encode_run_length(test_input), expect)
+        test_input_1 = (0, -2, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0,
+                        0, 0)
+        expect_1 = [(1, -2), (0, -1), (0, -1), (0, -1),
+                    ZRL, (11, -1), (0, -1), EOB]
+        self.assertSequenceEqual(encode_run_length(test_input_1), expect_1)
+        test_input_2 = (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99)
+        expect_2 = [(0, 1), ZRL, (0, 99), EOB]
+        self.assertSequenceEqual(encode_run_length(test_input_2), expect_2)
 
     def test_run_length_decode(self):
-        test_input = [(1, -2), (0, -1), (0, -1),
-                      (0, -1), (2, -1), (0, -1), EOB]
-        consumed_expect = (0, -2, -1, -1, -1, 0, 0, -1, -1)
+        test_input = [(1, -2), ZRL, (0, -1), ZRL, (2, -1), (0, -1), EOB]
+        consumed_expect = (0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                           0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                           0, 0, 0, -1, -1)
         result = decode_run_length(test_input)
         self.assertSequenceEqual(tuple(result), consumed_expect)
 
     def test_invertible(self):
-        """Run length codec is invertible iff there is no trailing zero when 
+        """Run length codec is invertible iff there is no trailing zero when
         encode.
         """
 
-        test_input = (0, -2, -1, -1, -1, 0, 0, -1, -1)
+        test_input = (0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1,
+                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1,
+                      -1)
         self.assertSequenceEqual(
             test_input,
             decode_run_length(encode_run_length(test_input))

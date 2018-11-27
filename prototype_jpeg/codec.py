@@ -1,3 +1,4 @@
+import collections
 import itertools
 
 from bitarray import bitarray as b
@@ -14,24 +15,52 @@ CHROMINANCE = 'chrominance'
 
 class Encoder:
     def __init__(self, data):
-        self.data = data
+        # Append 'cr' to 'cb' to make them as 'luminance'. Thus, `self.data`
+        # would be:
+        # OrderedDict{
+        #   LUMINANCE: (y),
+        #   CHROMINANCE: (cb)(cr)
+        # }
+        self.data = collections.OrderedDict((
+            (LUMINANCE, data['y']),
+            (CHROMINANCE, np.concatenate((data['cb'], data['cr'])))
+        ))
 
         # The differential DC in blocks order: 'y', 'cb', 'cr'.
-        self.diff_dc = encode_differential(self.dc)
+        self._diff_dc = None
 
         # The run-length-encoded AC in blocks order: 'y', 'cb', 'cr'. Every
-        #   sublist is the run-length-encoded AC of one block.
-        self.run_length_ac = [encode_run_length(iter_zig_zag(b)[1:])
-                              for l in self.data.values()
-                              for b in l]
+        # sublist is the run-length-encoded AC of one block.
+        self._run_length_ac = None
 
     @property
-    def dc(self):
-        return tuple(b[0][0] for l in self.data.values() for b in l)
+    def diff_dc(self):
+        if self._diff_dc is None:
+            self._get_diff_dc()
+        return self._diff_dc
+
+    @property
+    def run_length_ac(self):
+        if self._run_length_ac is None:
+            self._get_run_length_ac()
+        return self._run_length_ac
 
     def encode(self):
         # TODO: encode DCC and ACC and return a dict.
         pass
+
+    def _get_diff_dc(self):
+        self._diff_dc = collections.OrderedDict(((
+            k, encode_differential(l[:, 0, 0])
+        ) for k, l in self.data.items()))
+
+    def _get_run_length_ac(self):
+        self._run_length_ac = collections.OrderedDict()
+        for key, layer in self.data.items():
+            seq = []
+            for block in layer:
+                seq.extend(encode_run_length(iter_zig_zag(block)[1:]))
+            self._run_length_ac[key] = seq
 
 
 class Decoder:
@@ -109,7 +138,7 @@ def encode_run_length(seq):
     groups = [(len(tuple(group)), key)
               for key, group in itertools.groupby(seq)]
     ret = []
-    borrow = False
+    borrow = False # Borrow one pair in the next group whose key is nonzero.
     if groups[-1][1] == 0:
         del groups[-1]
     for idx, (length, key) in enumerate(groups):
@@ -119,6 +148,10 @@ def encode_run_length(seq):
         if length == 0:
             continue
         if key == 0:
+            # Deal with the case run (0s) more than 16 --> ZRL.
+            while length >= 16:
+                ret.append(ZRL)
+                length -= 16
             ret.append((length, groups[idx + 1][1]))
             borrow = True
         else:
