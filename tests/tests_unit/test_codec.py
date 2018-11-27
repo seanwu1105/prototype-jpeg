@@ -1,3 +1,4 @@
+import itertools
 import unittest
 
 from bitarray import bitarray as b
@@ -6,7 +7,7 @@ import numpy as np
 from prototype_jpeg.codec import (
     Encoder, Decoder, encode_huffman, encode_differential, decode_differential,
     iter_zig_zag, inverse_iter_zig_zag, encode_run_length, decode_run_length,
-    EOB, DC, AC, LUMINANCE, CHROMINANCE
+    EOB, DC, AC, LUMINANCE, CHROMINANCE, HUFFMAN_CATEGORY_CODEWORD
 )
 
 
@@ -282,21 +283,50 @@ class TestRunLengthCoding(unittest.TestCase):
 
 class TestHuffmanCategoryCodewordTableUniqueness(unittest.TestCase):
     def test_dc_luminance(self):
-        # Step 1. Examine all paris of codewords to see if any codeword is a
-        #         prefix of another.
-        # Step 2. Whenever we find such a pair, add the dangling suffix to the
-        #         list (unless it's already added).
-        # Step 3. Repeat step 2. and 3. until
-        #           Get a dangling suffix that is a codeword in the original
-        #               list. --> NOT uniquely decodable.
-        #           No more unique dangling suffix --> uniquely decodable.
-        temp_input = ('0', '01', '11')
+        self.assertTrue(test_unique_decodable(
+            HUFFMAN_CATEGORY_CODEWORD[DC][LUMINANCE]
+        ))
 
     def test_dc_chrominance(self):
-        pass
+        self.assertTrue(test_unique_decodable(
+            HUFFMAN_CATEGORY_CODEWORD[DC][CHROMINANCE]
+        ))
 
     def test_ac_luminance(self):
-        pass
+        self.assertTrue(test_unique_decodable(
+            HUFFMAN_CATEGORY_CODEWORD[AC][LUMINANCE].values()
+        ))
 
     def test_ac_chrominance(self):
-        pass
+        self.assertTrue(test_unique_decodable(
+            HUFFMAN_CATEGORY_CODEWORD[AC][CHROMINANCE].values()
+        ))
+
+
+def test_unique_decodable(codewords):
+    # Step 1. Examine all paris of codewords to see if any codeword is a
+    #         prefix of another.
+    # Step 2. Whenever we find such a pair, add the dangling suffix to the
+    #         list (unless it's already added).
+    # Step 3. Repeat step 2. and 3. until
+    #           Get a dangling suffix that is a codeword in the original
+    #               list. --> NOT uniquely decodable.
+    #           No more unique dangling suffix --> uniquely decodable.
+    original = set(codewords)
+    if len(codewords) != len(original):
+        return False
+    added = set()
+    new_unique_dangling_suffix = True
+
+    while new_unique_dangling_suffix:
+        new_unique_dangling_suffix = False
+        for pair in itertools.combinations(original.union(added), 2):
+            pair = sorted(pair, key=len)
+            if len(pair[0]) != len(pair[1]) and pair[1].startswith(pair[0]):
+                dangling_suffix = pair[1].replace(pair[0], '', 1)
+                if dangling_suffix in original:
+                    return False
+                if dangling_suffix not in added:
+                    new_unique_dangling_suffix = True
+                    added.add(dangling_suffix)
+    return True
