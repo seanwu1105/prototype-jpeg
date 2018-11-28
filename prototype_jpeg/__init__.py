@@ -75,7 +75,7 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
 
                 # Quantization
                 data[key][idx] = quantize(data[key][idx], key, quality=quality)
-            
+
             # Rounding
             data[key] = np.rint(data[key]).astype(int)
         # Entropy Encoder
@@ -97,21 +97,17 @@ def extract(byte_seq):
     subsampling_mode = 1
     # IF RGB #########################################
     positions = {
-        DC: {
-            LUMINANCE: int,
-            CHROMINANCE: int
-        },
-        AC: {
-            LUMINANCE: int,
-            CHROMINANCE: int
-        }
+        DC: {LUMINANCE: int, CHROMINANCE: int},
+        AC: {LUMINANCE: int, CHROMINANCE: int}
     }
     # IF GREY LEVEL ##################################
-    positions = { # Only LUMINANCE encoding table is used.
-        DC: int,
-        AC: int
-    }
+    # Only LUMINANCE encoding table is used.
+    positions = {DC: int, AC: int}
     ##################################################
+    # Slice the byte_seq into structured bit_seq (data).
+    # sorted_flatten_positions = sorted((v for t in (DC, AC)
+    #                                    for v in positions[t].values()))
+    # print(sorted_flatten_positions.index(10) + 1)
 
     # Calculate the size after subsampling.
     if subsampling_mode == 4:
@@ -125,7 +121,7 @@ def extract(byte_seq):
     if not grey_level:
         # TODO: Entropy Decoder
         data = byte_seq
-        # data = decode(byte_seq)
+        # data = decode(data)
         #   Do something to get decoded data having the following format:
         #   data = {
         #       'y': array_of_blocks,

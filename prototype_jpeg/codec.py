@@ -19,14 +19,14 @@ class Encoder:
     def __init__(self, data):
         # Append 'cr' to 'cb' to make them as 'luminance'. Thus, `self.data`
         # would be:
-        # OrderedDict{
+        # dict {
         #   LUMINANCE: (y),
         #   CHROMINANCE: (cb)(cr)
         # }
-        self.data = collections.OrderedDict((
-            (LUMINANCE, data['y']),
-            (CHROMINANCE, np.concatenate((data['cb'], data['cr'])))
-        ))
+        self.data = {
+            LUMINANCE: data['y'],
+            CHROMINANCE: np.concatenate((data['cb'], data['cr']))
+        }
 
         # The differential DC in blocks order: 'y', 'cb', 'cr'.
         self._diff_dc = None
@@ -58,7 +58,7 @@ class Encoder:
     def encode(self):
         """Encode differential DC and run-length-encoded AC with baseline JPEG
         Huffman table.
-        
+
         Returns:
             dict -- A dictionary containing DC and AC with luminance and
                 chrominance encoded layers. The format is:
@@ -76,7 +76,6 @@ class Encoder:
                 ```
         """
 
-        # RETURNVALUE = 
         ret = {
             DC: {},
             AC: {}
@@ -96,25 +95,24 @@ class Encoder:
 
     def _get_diff_dc(self):
         """Calculate the differential DC in the following format.
-        self._diff_dc = OrderedDict{
+        self._diff_dc = {
             LUMINANCE: (tuple of integers),
             CHROMINANCE: (tuple of intergers)
         }
         """
 
-        self._diff_dc = collections.OrderedDict(((
-            k, encode_differential(l[:, 0, 0])
-        ) for k, l in self.data.items()))
+        self._diff_dc = {k: encode_differential(l[:, 0, 0])
+                         for k, l in self.data.items()}
 
     def _get_run_length_ac(self):
         """Calculate the run-length-encoded AC in the following format.
-        self._run_length_ac = OrderedDict{
+        self._run_length_ac = {
             LUMINANCE: (list of integers),
             CHROMINANCE: (list of integers)
         }
         """
 
-        self._run_length_ac = collections.OrderedDict()
+        self._run_length_ac = {}
         for key, layer in self.data.items():
             seq = []
             for block in layer:
@@ -123,12 +121,33 @@ class Encoder:
 
 
 class Decoder:
-    def __init__(self, byte_seq):
-        pass
+    def __init__(self, data):
+        """Create a decoder based on baseline JPEG Huffman table.
 
-    def decode(self):
-        # TODO: decode DCC and ACC and return a dict.
-        pass
+        Arguments:
+            bit_seq {bitarray} -- The bitarray read rawly from file.
+            positions {dict} -- A dictionary indicating the indice (beginning
+                position) of DC.LUMINANCE, DC.CHROMINANCE, AC.LUMINANCE and
+                AC.CHROMINANCE.
+        """
+
+        self.data = data
+
+        # A nested dictionary containing decoded data, differential DC
+        # and run-length AC.
+        self._huffman_decoded = None
+        # A list containing all DC of blocks.
+        self._dc = None
+        # A nested 2D list containing all AC of blocks without reshape.
+        self._ac = None
+
+    def decode(self, subsampling_mode):
+        # TODO: merge self.dc and self.ac into original data.
+        return collections.OrderedDict((
+            ('y', np.array()),
+            ('cb', np.array()),
+            ('cr', np.array()),
+        ))
         # Next 16 bits searching:
         # try:
         #   HUFFMAN_CATEGORY_CODEWORD[value_type][layer_type].index(category_bits)
@@ -136,6 +155,34 @@ class Decoder:
         #   Remove one bits and search again till find matching.
         # After found, consume the matching bits (category code word) and DIFF
         # value code word (bits with size, index of category).
+
+    @property
+    def dc(self):
+        if self._dc is None:
+            self._get_dc()
+        return self._dc
+
+    @property
+    def ac(self):
+        if self._ac is None:
+            self._get_ac()
+        return self._ac
+
+    @property
+    def huffman_decoded(self):
+        if self._huffman_decoded is None:
+            self._get_huffman_decoded()
+        return self._huffman_decoded
+
+    def _get_dc(self):
+        pass
+
+    def _get_ac(self):
+        pass
+
+    def _get_huffman_decoded(self):
+        # self._huffman_decoded =
+        pass
 
 
 def encode_huffman(value, layer_type):
