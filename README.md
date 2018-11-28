@@ -9,3 +9,5 @@ TODO:
 bdict to improve efficiency.
 
 unittest for grey level encoding and decoding.
+
+NOTE: Large file might overflow the memory.

@@ -4,7 +4,6 @@ import functools
 import operator
 
 from bidict import bidict
-from bitarray import bitarray as b
 import numpy as np
 
 
@@ -66,12 +65,12 @@ class Encoder:
                 ```
                 ret = {
                     DC: {
-                        LUMINANCE: bitarray('...')
-                        CHROMINANCE: bitarray('...')
+                        LUMINANCE: '01...'
+                        CHROMINANCE: '01...'
                     }
                     AC: {
-                        LUMINANCE: bitarray('...')
-                        CHROMINANCE: bitarray('...')
+                        LUMINANCE: '01...'
+                        CHROMINANCE: '01...'
                     }
                 }
                 ```
@@ -202,8 +201,15 @@ def encode_huffman(value, layer_type):
         ValueError -- When the value is out of the range.
 
     Returns:
-        bitarray -- Huffman encoded bit array.
+        str -- Huffman encoded bit array.
     """
+
+    def index_2d(table, target):
+        for i, row in enumerate(table):
+            for j, element in enumerate(row):
+                if target == element:
+                    return (i, j)
+        raise ValueError('Cannot find the target value in the table.')
 
     if isinstance(value, int):  # DC
         if value <= -2048 or value >= 2048:
@@ -214,13 +220,13 @@ def encode_huffman(value, layer_type):
         size, fixed_code_idx = index_2d(HUFFMAN_CATEGORIES, value)
 
         if size == 0:
-            return b(HUFFMAN_CATEGORY_CODEWORD[DC][layer_type][size])
-        return b(HUFFMAN_CATEGORY_CODEWORD[DC][layer_type][size]
-                 + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
+            return HUFFMAN_CATEGORY_CODEWORD[DC][layer_type][size]
+        return (HUFFMAN_CATEGORY_CODEWORD[DC][layer_type][size]
+                + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
     else:   # AC
         value = tuple(value)
         if value == EOB or value == ZRL:
-            return b(HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][value])
+            return HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][value]
 
         run, nonzero = value
         if nonzero == 0 or nonzero <= -1024 or nonzero >= 1024:
@@ -230,24 +236,79 @@ def encode_huffman(value, layer_type):
             )
 
         size, fixed_code_idx = index_2d(HUFFMAN_CATEGORIES, nonzero)
-        return b(HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][(run, size)]
-                 + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
+        return (HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][(run, size)]
+                + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
 
 
 def decode_huffman(bit_seq, dc_ac, layer_type):
+    """Decode a bit sequence encoded by JPEG baseline Huffman table.
+
+    Arguments:
+        bit_seq {str} -- The encoded bit sequence.
+        dc_ac {DC or AC} -- The type of current.
+        layer_type {LUMINANCE or CHROMINANCE} -- The type of color space.
+
+    Raises:
+        IndexError -- When there is not enough bits in bit sequence to decode
+            DIFF value codeword.
+        KeyError -- When not able to find any prefix in current slice of bit
+            sequence in Huffman table.
+
+    Returns:
+        list -- A list of decoded value which could be an integer (differential
+            DC) or a tuple (run-length-encoded AC).
+    """
+
+    def diff_value(idx, size):
+        if idx >= bit_len or idx + size > bit_len:
+            raise IndexError('There is not enough bits to '
+                             'decode DIFF value codeword.')
+        fixed = bit_seq[idx:idx + size]
+        return int(fixed, 2)
+
+    ret = []
+    bit_len = len(bit_seq)
     current_idx = 0
-    if dc_ac == DC:
-        current_slice = bit_seq[current_idx:current_idx + 16]
+    while current_idx < bit_len:
+        remaining_len = bit_len - current_idx
+        current_slice = bit_seq[
+            current_idx:
+            current_idx + (16 if remaining_len > 16 else remaining_len)
+        ]
+        err_cache = current_slice
         while current_slice:
             try:
-                category = (HUFFMAN_CATEGORY_CODEWORD[dc_ac][layer_type]
-                            .inv[current_slice.to01()])
+                key = (HUFFMAN_CATEGORY_CODEWORD[dc_ac][layer_type]
+                       .inv[current_slice])
             except KeyError:
-                current_slice.pop()
+                current_slice = current_slice[:-1]
             else:
+                if dc_ac == DC:
+                    size = key
+                    if size == 0:
+                        ret.append(0)
+                    else:
+                        ret.append(HUFFMAN_CATEGORIES[size][diff_value(
+                            current_idx + len(current_slice),
+                            size
+                        )])
+                else:  # AC
+                    run, size = key
+                    if key == EOB or key == ZRL:
+                        ret.append(key)
+                    else:
+                        ret.append((run, HUFFMAN_CATEGORIES[size][diff_value(
+                            current_idx + len(current_slice),
+                            size
+                        )]))
+
+                current_idx += len(current_slice) + size
                 break
-    else:  # AC
-        pass
+        else:
+            raise KeyError(
+                f'Cannot find any prefix of {err_cache} in Huffman table.'
+            )
+    return ret
 
 
 def encode_differential(seq):
@@ -325,14 +386,6 @@ def move_zig_zag_idx(i, j, size):
     if j < (size - 1):
         return (max(0, i - 1), j + 1)
     return (i + 1, j)
-
-
-def index_2d(table, target):
-    for i, row in enumerate(table):
-        for j, element in enumerate(row):
-            if target == element:
-                return (i, j)
-    raise ValueError('Cannot find the target value in the table.')
 
 
 HUFFMAN_CATEGORIES = (

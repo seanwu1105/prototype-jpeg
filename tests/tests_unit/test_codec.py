@@ -3,13 +3,13 @@ import itertools
 import unittest
 from unittest import mock
 
-from bitarray import bitarray as b
 import numpy as np
 
 from prototype_jpeg.codec import (
-    Encoder, Decoder, encode_huffman, encode_differential, decode_differential,
-    iter_zig_zag, inverse_iter_zig_zag, encode_run_length, decode_run_length,
-    EOB, ZRL, DC, AC, LUMINANCE, CHROMINANCE, HUFFMAN_CATEGORY_CODEWORD
+    Encoder, Decoder, decode_huffman, encode_huffman, encode_differential,
+    decode_differential, iter_zig_zag, inverse_iter_zig_zag, encode_run_length,
+    decode_run_length, EOB, ZRL, DC, AC, LUMINANCE, CHROMINANCE,
+    HUFFMAN_CATEGORY_CODEWORD
 )
 
 
@@ -173,20 +173,20 @@ class TestEncoder(unittest.TestCase):
         }
         expect = {
             DC: {
-                LUMINANCE: b('1110111111 01110 100000 01111'.replace(' ', '')),
-                CHROMINANCE: b('11101111 110111'.replace(' ', ''))
+                LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
+                CHROMINANCE: '11101111 110111'.replace(' ', '')
             },
             AC: {
-                LUMINANCE: b(''.join((
+                LUMINANCE: ''.join((
                     '000', '111000', '0110', '1010',
                     '1101101', '11111111001', '11000', '1010',
                     '111000', '11111111001', '000', '1010',
                     '11111111001', '11111111001', '11001', '1010'
-                ))),
-                CHROMINANCE: b(''.join((
+                )),
+                CHROMINANCE: ''.join((
                     '011', '1111111010', '1111111010', '110100', '00',
                     '00'
-                )))
+                ))
             }
         }
         with mock.patch.object(Encoder, '__init__') as mock_Encoder_init:
@@ -229,21 +229,21 @@ class TestHuffmanCoding(unittest.TestCase):
             1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047
         )
         expect_categories = (
-            b('00'), b('0100'), b('01100'), b('100000'), b('1010000'),
-            b('11000000'), b('1110000000'), b('111100000000'),
-            b('11111000000000'), b('1111110000000000'), b('111111100000000000'),
-            b('11111111000000000000'), b('0101'), b('01111'), b('100111'),
-            b('1011111'), b('11011111'), b('1110111111'), b('111101111111'),
-            b('11111011111111'), b('1111110111111111'), b('111111101111111111'),
-            b('11111111011111111111')
+            '00', '0100', '01100', '100000', '1010000',
+            '11000000', '1110000000', '111100000000',
+            '11111000000000', '1111110000000000', '111111100000000000',
+            '11111111000000000000', '0101', '01111', '100111',
+            '1011111', '11011111', '1110111111', '111101111111',
+            '11111011111111', '1111110111111111', '111111101111111111',
+            '11111111011111111111'
         )
         for diff_dc, expect in zip(test_categories, expect_categories):
             self.assertEqual(encode_huffman(diff_dc, LUMINANCE),
                              expect)
         test_diff_values = (-3, -2, -1, 0, 1, 2, 3)
         expect_diff_values = (
-            b('01100'), b('01101'), b('0100'),
-            b('00'), b('0101'), b('01110'), b('01111')
+            '01100', '01101', '0100',
+            '00', '0101', '01110', '01111'
         )
         for diff_dc, expect in zip(test_diff_values, expect_diff_values):
             self.assertEqual(encode_huffman(diff_dc, LUMINANCE),
@@ -255,14 +255,14 @@ class TestHuffmanCoding(unittest.TestCase):
             1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047
         )
         expect_categories = (
-            b('00'), b('010'), b('1000'), b('110000'), b('11100000'),
-            b('1111000000'), b('111110000000'), b('11111100000000'),
-            b('1111111000000000'), b('111111110000000000'),
-            b('11111111100000000000'), b('1111111111000000000000'), b('011'),
-            b('1011'), b('110111'), b('11101111'), b('1111011111'),
-            b('111110111111'), b('11111101111111'), b('1111111011111111'),
-            b('111111110111111111'), b('11111111101111111111'),
-            b('1111111111011111111111')
+            '00', '010', '1000', '110000', '11100000',
+            '1111000000', '111110000000', '11111100000000',
+            '1111111000000000', '111111110000000000',
+            '11111111100000000000', '1111111111000000000000', '011',
+            '1011', '110111', '11101111', '1111011111',
+            '111110111111', '11111101111111', '1111111011111111',
+            '111111110111111111', '11111111101111111111',
+            '1111111111011111111111'
         )
         for diff_dc, expect in zip(test_categories, expect_categories):
             self.assertEqual(encode_huffman(diff_dc, CHROMINANCE),
@@ -270,8 +270,8 @@ class TestHuffmanCoding(unittest.TestCase):
 
         test_diff_values = (-3, -2, -1, 0, 1, 2, 3)
         expect_diff_values = (
-            b('1000'), b('1001'), b('010'),
-            b('00'), b('011'), b('1010'), b('1011')
+            '1000', '1001', '010',
+            '00', '011', '1010', '1011'
         )
         for diff_dc, expect in zip(test_diff_values, expect_diff_values):
             self.assertEqual(encode_huffman(diff_dc, CHROMINANCE),
@@ -288,8 +288,8 @@ class TestHuffmanCoding(unittest.TestCase):
     def test_encode_run_length_ac_luminance_codeword(self):
         test_inputs = ((1, -2), (0, -1), (2, -1), ZRL, (15, -1023), EOB)
         expects = (
-            b('1101101'), b('000'), b('111000'), b('11111111001'),
-            b('11111111111111100000000000'), b('1010')
+            '1101101', '000', '111000', '11111111001',
+            '11111111111111100000000000', '1010'
         )
         for run_length_ac, expect in zip(test_inputs, expects):
             self.assertEqual(encode_huffman(run_length_ac, LUMINANCE),
@@ -298,8 +298,8 @@ class TestHuffmanCoding(unittest.TestCase):
     def test_encode_run_length_ac_chrominance_codeword(self):
         test_inputs = ((1, -2), (0, 1), ZRL, (10, 1023), EOB)
         expects = (
-            b('11100101'), b('011'), b('1111111010'),
-            b('11111111110100011111111111'), b('00')
+            '11100101', '011', '1111111010',
+            '11111111110100011111111111', '00'
         )
         for run_length_ac, expect in zip(test_inputs, expects):
             self.assertEqual(encode_huffman(run_length_ac, CHROMINANCE),
@@ -322,19 +322,106 @@ class TestHuffmanCoding(unittest.TestCase):
                 encode_huffman(val, CHROMINANCE)
 
     def test_decode_diff_dc_luminance_codeword(self):
-        pass
+        test_0 = '00'
+        expect_0 = [0]
+        self.assertSequenceEqual(
+            decode_huffman(test_0, DC, LUMINANCE),
+            expect_0
+        )
+        test_27_len = ''.join(('1011111', '11111011111111'))
+        expect_27_len = [15, 255]
+        self.assertSequenceEqual(
+            decode_huffman(test_27_len, DC, LUMINANCE),
+            expect_27_len
+        )
+        test_32_len = ''.join(('11111111011111111111', '111100000000'))
+        expect_32_len = [2047, -127]
+        self.assertSequenceEqual(
+            decode_huffman(test_32_len, DC, LUMINANCE),
+            expect_32_len
+        )
 
     def test_decode_diff_dc_chrominance_codeword(self):
-        pass
+        test_input = '1011'
+        expect = [3]
+        self.assertSequenceEqual(
+            decode_huffman(test_input, DC, CHROMINANCE),
+            expect
+        )
 
     def test_decode_run_length_ac_luminance_codeword(self):
-        pass
+        test_EOB = '1010'
+        expect_EOB = [EOB]
+        self.assertSequenceEqual(
+            decode_huffman(test_EOB, AC, LUMINANCE),
+            expect_EOB
+        )
+        test_ZRL = '11111111001'
+        expect_ZRL = [ZRL]
+        self.assertSequenceEqual(
+            decode_huffman(test_ZRL, AC, LUMINANCE),
+            expect_ZRL
+        )
+        test_26_len = '11111111111111100000000000'
+        expect_26_len = [(15, -1023)]
+        self.assertSequenceEqual(
+            decode_huffman(test_26_len, AC, LUMINANCE),
+            expect_26_len
+        )
+        test_32_len = ''.join(('1111000111111', '1111111111010001000'))
+        expect_32_len = [(0, 63), (11, -7)]
+        self.assertSequenceEqual(
+            decode_huffman(test_32_len, AC, LUMINANCE),
+            expect_32_len
+        )
 
     def test_decode_run_length_ac_chrominance_codeword(self):
-        pass
+        test_EOB = '00'
+        expect_EOB = [EOB]
+        self.assertSequenceEqual(
+            decode_huffman(test_EOB, AC, CHROMINANCE),
+            expect_EOB
+        )
+        test_ZRL = '1111111010'
+        expect_ZRL = [ZRL]
+        self.assertSequenceEqual(
+            decode_huffman(test_ZRL, AC, CHROMINANCE),
+            expect_ZRL
+        )
+        test_26_len = '10111'
+        expect_26_len = [(1, 1)]
+        self.assertSequenceEqual(
+            decode_huffman(test_26_len, AC, CHROMINANCE),
+            expect_26_len
+        )
 
     def test_decode_cannot_find_in_table(self):
-        pass
+        test_input = '011011'
+        with self.assertRaises(KeyError):
+            print(decode_huffman(test_input, DC, LUMINANCE))
+        test_input = '1011111'
+        with self.assertRaises(KeyError):
+            print(decode_huffman(test_input, DC, CHROMINANCE))
+        test_input = '1000111'
+        with self.assertRaises(KeyError):
+            print(decode_huffman(test_input, AC, LUMINANCE))
+        test_input = '100111'
+        with self.assertRaises(KeyError):
+            print(decode_huffman(test_input, AC, CHROMINANCE))
+
+    def test_decode_error_fixed_code(self):
+        test_input = '11010'
+        with self.assertRaises(IndexError):
+            print(decode_huffman(test_input, DC, LUMINANCE))
+        test_input = '11010'
+        with self.assertRaises(IndexError):
+            print(decode_huffman(test_input, DC, CHROMINANCE))
+        test_input = '11010'
+        with self.assertRaises(IndexError):
+            print(decode_huffman(test_input, AC, LUMINANCE))
+        test_input = '11010'
+        with self.assertRaises(IndexError):
+            print(decode_huffman(test_input, AC, CHROMINANCE))
 
 
 class TestDifferentialCoding(unittest.TestCase):
