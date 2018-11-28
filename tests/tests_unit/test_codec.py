@@ -198,28 +198,31 @@ class TestEncoder(unittest.TestCase):
 
 
 class TestDecoder(unittest.TestCase):
-    def test_decode(self):
-        test_instance = Decoder({
-            DC: {
-                LUMINANCE: b('1110111111 01110 100000 01111'.replace(' ', '')),
-                CHROMINANCE: b('11101111 110111'.replace(' ', ''))
-            },
-            AC: {
-                LUMINANCE: b(''.join((
-                    '000', '111000', '0110', '1010',
-                    '1101101', '11111111001', '11000', '1010',
-                    '111000', '11111111001', '000', '1010',
-                    '11111111001', '11111111001', '11001', '1010'
-                ))),
-                CHROMINANCE: b(''.join((
-                    '011', '1111111010', '1111111010', '110100', '00',
-                    '00'
-                )))
-            }
-        })
+    def test_get_huffman_decoded(self):
+        pass
+        # test_instance = Decoder({
+        #     DC: {
+        #         LUMINANCE: b('1110111111 01110 100000 01111'.replace(' ', '')),
+        #         CHROMINANCE: b('11101111 110111'.replace(' ', ''))
+        #     },
+        #     AC: {
+        #         LUMINANCE: b(''.join((
+        #             '000', '111000', '0110', '1010',
+        #             '1101101', '11111111001', '11000', '1010',
+        #             '111000', '11111111001', '000', '1010',
+        #             '11111111001', '11111111001', '11001', '1010'
+        #         ))),
+        #         CHROMINANCE: b(''.join((
+        #             '011', '1111111010', '1111111010', '110100', '00',
+        #             '00'
+        #         )))
+        #     }
+        # })
+        # expect = {}
+        # self.assertDictEqual(test_instance.huffman_decoded, expect)
 
 
-class TestHuffmanEncoding(unittest.TestCase):
+class TestHuffmanCoding(unittest.TestCase):
     def test_encode_diff_dc_luminance_codeword(self):
         test_categories = (
             0, -1, -3, -7, -15, -31, -63, -127, -255, -511, -1023, -2047,
@@ -318,6 +321,21 @@ class TestHuffmanEncoding(unittest.TestCase):
             with self.assertRaises(KeyError):
                 encode_huffman(val, CHROMINANCE)
 
+    def test_decode_diff_dc_luminance_codeword(self):
+        pass
+
+    def test_decode_diff_dc_chrominance_codeword(self):
+        pass
+
+    def test_decode_run_length_ac_luminance_codeword(self):
+        pass
+
+    def test_decode_run_length_ac_chrominance_codeword(self):
+        pass
+
+    def test_decode_cannot_find_in_table(self):
+        pass
+
 
 class TestDifferentialCoding(unittest.TestCase):
     def test_differential_encode(self):
@@ -401,23 +419,36 @@ class TestRunLengthCoding(unittest.TestCase):
         )
 
 
-class TestHuffmanCategoryCodewordTableUniqueness(unittest.TestCase):
-    def test_dc_luminance(self):
+class TestHuffmanCategoryCodewordTable(unittest.TestCase):
+    def test_dc_no_same_keys(self):
+        for layer in (LUMINANCE, CHROMINANCE):
+            test_input = HUFFMAN_CATEGORY_CODEWORD[DC][layer].keys()
+            expect = {i for i in range(11 + 1)}
+            self.assertSetEqual(set(test_input), expect)
+
+    def test_ac_no_same_keys(self):
+        for layer in (LUMINANCE, CHROMINANCE):
+            test_input = HUFFMAN_CATEGORY_CODEWORD[AC][layer].keys()
+            expect = set(itertools.product(range(15 + 1), range(1, 10 + 1)))
+            expect.update((EOB, ZRL))
+            self.assertSetEqual(set(test_input), expect)
+
+    def test_dc_luminance_uniqueness(self):
         self.assertTrue(test_unique_decodable(
-            HUFFMAN_CATEGORY_CODEWORD[DC][LUMINANCE]
+            HUFFMAN_CATEGORY_CODEWORD[DC][LUMINANCE].values()
         ))
 
-    def test_dc_chrominance(self):
+    def test_dc_chrominance_uniqueness(self):
         self.assertTrue(test_unique_decodable(
-            HUFFMAN_CATEGORY_CODEWORD[DC][CHROMINANCE]
+            HUFFMAN_CATEGORY_CODEWORD[DC][CHROMINANCE].values()
         ))
 
-    def test_ac_luminance(self):
+    def test_ac_luminance_uniqueness(self):
         self.assertTrue(test_unique_decodable(
             HUFFMAN_CATEGORY_CODEWORD[AC][LUMINANCE].values()
         ))
 
-    def test_ac_chrominance(self):
+    def test_ac_chrominance_uniqueness(self):
         self.assertTrue(test_unique_decodable(
             HUFFMAN_CATEGORY_CODEWORD[AC][CHROMINANCE].values()
         ))

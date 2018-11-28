@@ -6,4 +6,6 @@ JPEG HUFFMAN Table source: http://dirac.epucfe.eu/projets/wakka.php?wiki=P14AB08
 
 TODO:
 
+bdict to improve efficiency.
+
 unittest for grey level encoding and decoding.

@@ -3,6 +3,7 @@ import itertools
 import functools
 import operator
 
+from bidict import bidict
 from bitarray import bitarray as b
 import numpy as np
 
@@ -76,10 +77,7 @@ class Encoder:
                 ```
         """
 
-        ret = {
-            DC: {},
-            AC: {}
-        }
+        ret = {DC: {}, AC: {}}
         for layer_type in (LUMINANCE, CHROMINANCE):
             ret[DC][layer_type] = functools.reduce(
                 operator.add,
@@ -125,10 +123,12 @@ class Decoder:
         """Create a decoder based on baseline JPEG Huffman table.
 
         Arguments:
-            bit_seq {bitarray} -- The bitarray read rawly from file.
-            positions {dict} -- A dictionary indicating the indice (beginning
-                position) of DC.LUMINANCE, DC.CHROMINANCE, AC.LUMINANCE and
-                AC.CHROMINANCE.
+            data {dict} -- A dictionary containing DC/AC luminance and
+                chrominance bit array as following format.
+                {
+                    DC: {LUMINANCE: b('...'), CHROMINANCE: b('...')},
+                    AC: {LUMINANCE: b('...'), CHROMINANCE: b('...')}
+                }
         """
 
         self.data = data
@@ -181,8 +181,13 @@ class Decoder:
         pass
 
     def _get_huffman_decoded(self):
-        # self._huffman_decoded =
-        pass
+        self._huffman_decoded = {
+            current: {
+                layer: decode_huffman(value, current, layer)
+                for layer, value in sub_dict.items()
+            }
+            for current, sub_dict in self.data.items()
+        }
 
 
 def encode_huffman(value, layer_type):
@@ -227,6 +232,22 @@ def encode_huffman(value, layer_type):
         size, fixed_code_idx = index_2d(HUFFMAN_CATEGORIES, nonzero)
         return b(HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][(run, size)]
                  + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
+
+
+def decode_huffman(bit_seq, dc_ac, layer_type):
+    current_idx = 0
+    if dc_ac == DC:
+        current_slice = bit_seq[current_idx:current_idx + 16]
+        while current_slice:
+            try:
+                category = (HUFFMAN_CATEGORY_CODEWORD[dc_ac][layer_type]
+                            .inv[current_slice.to01()])
+            except KeyError:
+                current_slice.pop()
+            else:
+                break
+    else:  # AC
+        pass
 
 
 def encode_differential(seq):
@@ -335,37 +356,37 @@ HUFFMAN_CATEGORIES = (
 
 HUFFMAN_CATEGORY_CODEWORD = {
     DC: {
-        LUMINANCE: (
-            '00',
-            '010',
-            '011',
-            '100',
-            '101',
-            '110',
-            '1110',
-            '11110',
-            '111110',
-            '1111110',
-            '11111110',
-            '111111110'
-        ),
-        CHROMINANCE: (
-            '00',
-            '01',
-            '10',
-            '110',
-            '1110',
-            '11110',
-            '111110',
-            '1111110',
-            '11111110',
-            '111111110',
-            '1111111110',
-            '11111111110'
-        )
+        LUMINANCE: bidict({
+            0:  '00',
+            1:  '010',
+            2:  '011',
+            3:  '100',
+            4:  '101',
+            5:  '110',
+            6:  '1110',
+            7:  '11110',
+            8:  '111110',
+            9:  '1111110',
+            10: '11111110',
+            11: '111111110'
+        }),
+        CHROMINANCE: bidict({
+            0:  '00',
+            1:  '01',
+            2:  '10',
+            3:  '110',
+            4:  '1110',
+            5:  '11110',
+            6:  '111110',
+            7:  '1111110',
+            8:  '11111110',
+            9:  '111111110',
+            10: '1111111110',
+            11: '11111111110'
+        })
     },
     AC: {
-        LUMINANCE: {
+        LUMINANCE: bidict({
             EOB: '1010',  # (0, 0)
             ZRL: '11111111001',  # (F, 0)
 
@@ -544,8 +565,8 @@ HUFFMAN_CATEGORY_CODEWORD = {
             (15, 8):  '1111111111111100',
             (15, 9):  '1111111111111101',
             (15, 10): '1111111111111110'
-        },
-        CHROMINANCE: {
+        }),
+        CHROMINANCE: bidict({
             EOB: '00',  # (0, 0)
             ZRL: '1111111010',  # (F, 0)
 
@@ -724,6 +745,6 @@ HUFFMAN_CATEGORY_CODEWORD = {
             (15, 8):  '1111111111111100',
             (15, 9):  '1111111111111101',
             (15, 10): '1111111111111110'
-        }
+        })
     }
 }
