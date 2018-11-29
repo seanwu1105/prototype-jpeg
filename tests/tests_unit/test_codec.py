@@ -362,19 +362,19 @@ class TestHuffmanCoding(unittest.TestCase):
         test_0 = '00'
         expect_0 = [0]
         self.assertSequenceEqual(
-            decode_huffman(test_0, DC, LUMINANCE),
+            list(decode_huffman(test_0, DC, LUMINANCE)),
             expect_0
         )
         test_27_len = ''.join(('1011111', '11111011111111'))
         expect_27_len = [15, 255]
         self.assertSequenceEqual(
-            decode_huffman(test_27_len, DC, LUMINANCE),
+            list(decode_huffman(test_27_len, DC, LUMINANCE)),
             expect_27_len
         )
         test_32_len = ''.join(('11111111011111111111', '111100000000'))
         expect_32_len = [2047, -127]
         self.assertSequenceEqual(
-            decode_huffman(test_32_len, DC, LUMINANCE),
+            list(decode_huffman(test_32_len, DC, LUMINANCE)),
             expect_32_len
         )
 
@@ -382,7 +382,7 @@ class TestHuffmanCoding(unittest.TestCase):
         test_input = '1011'
         expect = [3]
         self.assertSequenceEqual(
-            decode_huffman(test_input, DC, CHROMINANCE),
+            list(decode_huffman(test_input, DC, CHROMINANCE)),
             expect
         )
 
@@ -390,25 +390,25 @@ class TestHuffmanCoding(unittest.TestCase):
         test_EOB = '1010'
         expect_EOB = [EOB]
         self.assertSequenceEqual(
-            decode_huffman(test_EOB, AC, LUMINANCE),
+            list(decode_huffman(test_EOB, AC, LUMINANCE)),
             expect_EOB
         )
         test_ZRL = '11111111001'
         expect_ZRL = [ZRL]
         self.assertSequenceEqual(
-            decode_huffman(test_ZRL, AC, LUMINANCE),
+            list(decode_huffman(test_ZRL, AC, LUMINANCE)),
             expect_ZRL
         )
         test_26_len = '11111111111111100000000000'
         expect_26_len = [(15, -1023)]
         self.assertSequenceEqual(
-            decode_huffman(test_26_len, AC, LUMINANCE),
+            list(decode_huffman(test_26_len, AC, LUMINANCE)),
             expect_26_len
         )
         test_32_len = ''.join(('1111000111111', '1111111111010001000'))
         expect_32_len = [(0, 63), (11, -7)]
         self.assertSequenceEqual(
-            decode_huffman(test_32_len, AC, LUMINANCE),
+            list(decode_huffman(test_32_len, AC, LUMINANCE)),
             expect_32_len
         )
 
@@ -416,49 +416,49 @@ class TestHuffmanCoding(unittest.TestCase):
         test_EOB = '00'
         expect_EOB = [EOB]
         self.assertSequenceEqual(
-            decode_huffman(test_EOB, AC, CHROMINANCE),
+            list(decode_huffman(test_EOB, AC, CHROMINANCE)),
             expect_EOB
         )
         test_ZRL = '1111111010'
         expect_ZRL = [ZRL]
         self.assertSequenceEqual(
-            decode_huffman(test_ZRL, AC, CHROMINANCE),
+            list(decode_huffman(test_ZRL, AC, CHROMINANCE)),
             expect_ZRL
         )
         test_26_len = '10111'
         expect_26_len = [(1, 1)]
         self.assertSequenceEqual(
-            decode_huffman(test_26_len, AC, CHROMINANCE),
+            list(decode_huffman(test_26_len, AC, CHROMINANCE)),
             expect_26_len
         )
 
     def test_decode_cannot_find_in_table(self):
         test_input = '011011'
         with self.assertRaises(KeyError):
-            print(decode_huffman(test_input, DC, LUMINANCE))
+            tuple(decode_huffman(test_input, DC, LUMINANCE))
         test_input = '1011111'
         with self.assertRaises(KeyError):
-            print(decode_huffman(test_input, DC, CHROMINANCE))
+            tuple(decode_huffman(test_input, DC, CHROMINANCE))
         test_input = '1000111'
         with self.assertRaises(KeyError):
-            print(decode_huffman(test_input, AC, LUMINANCE))
+            tuple(decode_huffman(test_input, AC, LUMINANCE))
         test_input = '100111'
         with self.assertRaises(KeyError):
-            print(decode_huffman(test_input, AC, CHROMINANCE))
+            tuple(decode_huffman(test_input, AC, CHROMINANCE))
 
     def test_decode_error_fixed_code(self):
         test_input = '11010'
         with self.assertRaises(IndexError):
-            print(decode_huffman(test_input, DC, LUMINANCE))
+            tuple(decode_huffman(test_input, DC, LUMINANCE))
         test_input = '11010'
         with self.assertRaises(IndexError):
-            print(decode_huffman(test_input, DC, CHROMINANCE))
+            tuple(decode_huffman(test_input, DC, CHROMINANCE))
         test_input = '11010'
         with self.assertRaises(IndexError):
-            print(decode_huffman(test_input, AC, LUMINANCE))
+            tuple(decode_huffman(test_input, AC, LUMINANCE))
         test_input = '11010'
         with self.assertRaises(IndexError):
-            print(decode_huffman(test_input, AC, CHROMINANCE))
+            tuple(decode_huffman(test_input, AC, CHROMINANCE))
 
 
 class TestDifferentialCoding(unittest.TestCase):
@@ -484,7 +484,7 @@ class TestZigZag(unittest.TestCase):
     def test_zig_zag_scan_4x4(self):
         test_input = np.arange(16).reshape(4, 4)
         expect = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15]
-        self.assertSequenceEqual(iter_zig_zag(test_input), expect)
+        self.assertSequenceEqual(list(iter_zig_zag(test_input)), expect)
 
     def test_zig_zag_scan_8x8(self):
         test_input = np.arange(64).reshape(8, 8)
@@ -494,7 +494,7 @@ class TestZigZag(unittest.TestCase):
             42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51,
             58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63
         ]
-        self.assertSequenceEqual(iter_zig_zag(test_input), expect)
+        self.assertSequenceEqual(list(iter_zig_zag(test_input)), expect)
 
     def test_inverse_zig_zag_scan(self):
         test_input = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15]
@@ -505,7 +505,7 @@ class TestZigZag(unittest.TestCase):
         test_input = np.arange(64).reshape(8, 8)
         np.testing.assert_array_equal(
             test_input,
-            inverse_iter_zig_zag(iter_zig_zag(test_input))
+            inverse_iter_zig_zag(list(iter_zig_zag(test_input)))
         )
 
 

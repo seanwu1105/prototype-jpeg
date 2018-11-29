@@ -113,7 +113,7 @@ class Encoder:
         for key, layer in self.data.items():
             seq = []
             for block in layer:
-                seq.extend(encode_run_length(iter_zig_zag(block)[1:]))
+                seq.extend(encode_run_length(list(iter_zig_zag(block))[1:]))
             self._run_length_ac[key] = seq
 
 
@@ -254,8 +254,8 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
             sequence in Huffman table.
 
     Returns:
-        list -- A list of decoded value which could be an integer (differential
-            DC) or a tuple (run-length-encoded AC).
+        Generator -- A generator and its item is decoded value which could be an
+            integer (differential DC) or a tuple (run-length-encoded AC).
     """
 
     def diff_value(idx, size):
@@ -265,7 +265,6 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
         fixed = bit_seq[idx:idx + size]
         return int(fixed, 2)
 
-    ret = []
     bit_len = len(bit_seq)
     current_idx = 0
     while current_idx < bit_len:
@@ -283,21 +282,21 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
                 if dc_ac == DC:
                     size = key
                     if size == 0:
-                        ret.append(0)
+                        yield 0
                     else:
-                        ret.append(HUFFMAN_CATEGORIES[size][diff_value(
+                         yield HUFFMAN_CATEGORIES[size][diff_value(
                             current_idx + len(current_slice),
                             size
-                        )])
+                        )]
                 else:  # AC
                     run, size = key
                     if key == EOB or key == ZRL:
-                        ret.append(key)
+                        yield key
                     else:
-                        ret.append((run, HUFFMAN_CATEGORIES[size][diff_value(
+                        yield (run, HUFFMAN_CATEGORIES[size][diff_value(
                             current_idx + len(current_slice),
                             size
-                        )]))
+                        )])
 
                 current_idx += len(current_slice) + size
                 break
@@ -307,7 +306,6 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
             raise KeyError(
                 f'Cannot find any prefix of {err_cache} in Huffman table.'
             )
-    return ret
 
 
 def encode_differential(seq):
@@ -354,15 +352,13 @@ def decode_run_length(seq):
 def iter_zig_zag(data):
     if data.shape[0] != data.shape[1]:
         raise ValueError('The shape of input array should be square.')
-    ret = []
     x, y = 0, 0
     for _ in np.nditer(data):
-        ret.append(data[y][x])
+        yield data[y][x]
         if (x + y) % 2 == 1:
             x, y = move_zig_zag_idx(x, y, data.shape[0])
         else:
             y, x = move_zig_zag_idx(y, x, data.shape[0])
-    return ret
 
 
 def inverse_iter_zig_zag(seq):
