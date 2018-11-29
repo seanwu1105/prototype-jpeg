@@ -4,6 +4,7 @@ import unittest
 from unittest import mock
 
 import numpy as np
+import pytest
 
 from prototype_jpeg.codec import (
     Encoder, Decoder, decode_huffman, encode_huffman, encode_differential,
@@ -202,20 +203,20 @@ class TestDecoder(unittest.TestCase):
         pass
         # test_instance = Decoder({
         #     DC: {
-        #         LUMINANCE: b('1110111111 01110 100000 01111'.replace(' ', '')),
-        #         CHROMINANCE: b('11101111 110111'.replace(' ', ''))
+        #         LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
+        #         CHROMINANCE: '11101111 110111'.replace(' ', '')
         #     },
         #     AC: {
-        #         LUMINANCE: b(''.join((
+        #         LUMINANCE: ''.join((
         #             '000', '111000', '0110', '1010',
         #             '1101101', '11111111001', '11000', '1010',
         #             '111000', '11111111001', '000', '1010',
         #             '11111111001', '11111111001', '11001', '1010'
-        #         ))),
-        #         CHROMINANCE: b(''.join((
+        #         )),
+        #         CHROMINANCE: ''.join((
         #             '011', '1111111010', '1111111010', '110100', '00',
         #             '00'
-        #         )))
+        #         ))
         #     }
         # })
         # expect = {}
@@ -521,27 +522,27 @@ class TestHuffmanCategoryCodewordTable(unittest.TestCase):
             self.assertSetEqual(set(test_input), expect)
 
     def test_dc_luminance_uniqueness(self):
-        self.assertTrue(test_unique_decodable(
+        self.assertTrue(is_unique_decodable(
             HUFFMAN_CATEGORY_CODEWORD[DC][LUMINANCE].values()
         ))
 
     def test_dc_chrominance_uniqueness(self):
-        self.assertTrue(test_unique_decodable(
+        self.assertTrue(is_unique_decodable(
             HUFFMAN_CATEGORY_CODEWORD[DC][CHROMINANCE].values()
         ))
 
     def test_ac_luminance_uniqueness(self):
-        self.assertTrue(test_unique_decodable(
+        self.assertTrue(is_unique_decodable(
             HUFFMAN_CATEGORY_CODEWORD[AC][LUMINANCE].values()
         ))
 
     def test_ac_chrominance_uniqueness(self):
-        self.assertTrue(test_unique_decodable(
+        self.assertTrue(is_unique_decodable(
             HUFFMAN_CATEGORY_CODEWORD[AC][CHROMINANCE].values()
         ))
 
 
-def test_unique_decodable(codewords):
+def is_unique_decodable(codewords):
     # Step 1. Examine all paris of codewords to see if any codeword is a
     #         prefix of another.
     # Step 2. Whenever we find such a pair, add the dangling suffix to the

@@ -3,10 +3,15 @@ image: python:3.6
 before_script:
   - python3 -m pip install -r requirements.txt
 
-features:
+nose2:
   script:
     - python3 -m pip install nose2
-    - nose2 -v --with-coverage --log-capture
+    - nose2 -v --with-coverage
+
+pytest:
+  script:
+    - python3 -m pip install pytest
+    - python3 -m pytest -v
 
 pylint:
   script:
