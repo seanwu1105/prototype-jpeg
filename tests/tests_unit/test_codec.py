@@ -258,6 +258,9 @@ class TestDecoder(unittest.TestCase):
         }
         self.assertDictEqual(test_instance.ac, expect)
 
+    def test_decode(self):
+        pass
+
 
 class TestHuffmanCoding(unittest.TestCase):
     def test_encode_diff_dc_luminance_codeword(self):
@@ -496,9 +499,19 @@ class TestZigZag(unittest.TestCase):
         ]
         self.assertSequenceEqual(list(iter_zig_zag(test_input)), expect)
 
-    def test_inverse_zig_zag_scan(self):
+    def test_inverse_zig_zag_scan_16(self):
         test_input = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12, 13, 10, 7, 11, 14, 15]
         expect = np.arange(16).reshape(4, 4)
+        np.testing.assert_array_equal(inverse_iter_zig_zag(test_input), expect)
+
+    def test_inverse_zig_zag_scan_12(self):
+        test_input = [0, 1, 4, 8, 5, 2, 3, 6, 9, 12]
+        expect = np.array([
+            [0, 1, 2, 3],
+            [4, 5, 6, 0],
+            [8, 9, 0, 0],
+            [12, 0, 0, 0]
+        ])
         np.testing.assert_array_equal(inverse_iter_zig_zag(test_input), expect)
 
     def test_invertible(self):

@@ -139,19 +139,21 @@ class Decoder:
         self._ac = None
 
     def decode(self, subsampling_mode):
-        # TODO: merge self.dc and self.ac into original data.
+        shaped = {}
+        for layer in (LUMINANCE, CHROMINANCE):
+            if len(self.dc[layer]) != len(self.ac[layer]):
+                raise ValueError(f'DC {layer} size {len(self.dc[layer])} is not '
+                                 f'equal to AC {layer} size '
+                                 f'{len(self.ac[layer])}.')
+
+            # for dc, ac in zip(self.dc[layer], self.ac[layer]):
+            #     inverse_iter_zig_zag(dc + ac)
+
         return collections.OrderedDict((
             ('y', np.array()),
             ('cb', np.array()),
             ('cr', np.array()),
         ))
-        # Next 16 bits searching:
-        # try:
-        #   HUFFMAN_CATEGORY_CODEWORD[value_type][layer_type].index(category_bits)
-        # except:
-        #   Remove one bits and search again till find matching.
-        # After found, consume the matching bits (category code word) and DIFF
-        # value code word (bits with size, index of category).
 
     @property
     def dc(self):
@@ -268,6 +270,13 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
     bit_len = len(bit_seq)
     current_idx = 0
     while current_idx < bit_len:
+        #   1. Consume next 16 bits as `current_slice`.
+        #   2. Try to find the `current_slice` in Huffman table.
+        #   3. If found, yield the corresponding key and go to step 4.
+        #      Otherwise, remove the last element in `current_slice` and go to
+        #      step 2.
+        #   4. Consume next n bits, where n is the category (size) in returned
+        #      key yielded in step 3. Use those info to decode the data.
         remaining_len = bit_len - current_idx
         current_slice = bit_seq[
             current_idx:
@@ -284,7 +293,7 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
                     if size == 0:
                         yield 0
                     else:
-                         yield HUFFMAN_CATEGORIES[size][diff_value(
+                        yield HUFFMAN_CATEGORIES[size][diff_value(
                             current_idx + len(current_slice),
                             size
                         )]
@@ -361,11 +370,14 @@ def iter_zig_zag(data):
             y, x = move_zig_zag_idx(y, x, data.shape[0])
 
 
-def inverse_iter_zig_zag(seq):
-    if not (len(seq) ** 0.5).is_integer():
-        raise ValueError('The length of input sequence should be perfect '
-                         'square.')
-    size = int(len(seq) ** 0.5)
+def inverse_iter_zig_zag(seq, fill=0):
+    def smallest_square_larger_than(value):
+        for ret in itertools.count():
+            if ret**2 >= value:
+                return ret
+
+    size = smallest_square_larger_than(len(seq))
+    seq = tuple(seq) + (fill, ) * (size**2 - len(seq))
     ret = np.empty((size, size), dtype=int)
     x, y = 0, 0
     for value in seq:
