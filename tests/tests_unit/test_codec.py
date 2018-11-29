@@ -4,7 +4,6 @@ import unittest
 from unittest import mock
 
 import numpy as np
-import pytest
 
 from prototype_jpeg.codec import (
     Encoder, Decoder, decode_huffman, encode_huffman, encode_differential,
