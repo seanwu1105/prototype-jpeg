@@ -198,28 +198,65 @@ class TestEncoder(unittest.TestCase):
 
 
 class TestDecoder(unittest.TestCase):
-    def test_get_huffman_decoded(self):
-        pass
-        # test_instance = Decoder({
-        #     DC: {
-        #         LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
-        #         CHROMINANCE: '11101111 110111'.replace(' ', '')
-        #     },
-        #     AC: {
-        #         LUMINANCE: ''.join((
-        #             '000', '111000', '0110', '1010',
-        #             '1101101', '11111111001', '11000', '1010',
-        #             '111000', '11111111001', '000', '1010',
-        #             '11111111001', '11111111001', '11001', '1010'
-        #         )),
-        #         CHROMINANCE: ''.join((
-        #             '011', '1111111010', '1111111010', '110100', '00',
-        #             '00'
-        #         ))
-        #     }
-        # })
-        # expect = {}
-        # self.assertDictEqual(test_instance.huffman_decoded, expect)
+    def test_dc(self):
+        test_instance = Decoder({
+            DC: {
+                LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
+                CHROMINANCE: '11101111 110111'.replace(' ', '')
+            },
+            AC: {
+                LUMINANCE: ''.join((
+                    '000', '111000', '0110', '1010',
+                    '1101101', '11111111001', '11000', '1010',
+                    '111000', '11111111001', '000', '1010',
+                    '11111111001', '11111111001', '11001', '1010'
+                )),
+                CHROMINANCE: ''.join((
+                    '011', '1111111010', '1111111010', '110100', '00',
+                    '00'
+                ))
+            }
+        })
+        expect = {
+            LUMINANCE: (63, 65, 58, 61),
+            CHROMINANCE: (15, 22)
+        }
+        self.assertDictEqual(test_instance.dc, expect)
+
+    def test_ac(self):
+        test_instance = Decoder({
+            DC: {
+                LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
+                CHROMINANCE: '11101111 110111'.replace(' ', '')
+            },
+            AC: {
+                LUMINANCE: ''.join((
+                    '000', '111000', '0110', '1010',
+                    '1101101', '11111111001', '11000', '1010',
+                    '111000', '11111111001', '000', '1010',
+                    '11111111001', '11111111001', '11001', '1010'
+                )),
+                CHROMINANCE: ''.join((
+                    '011', '1111111010', '1111111010', '110100', '00',
+                    '00'
+                ))
+            }
+        })
+        expect = {
+            LUMINANCE: (
+                (-1, 0, 0, -1, 2),
+                (0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
+                (0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
+                (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+            ),
+            CHROMINANCE: (
+                (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
+                ()
+            )
+        }
+        self.assertDictEqual(test_instance.ac, expect)
 
 
 class TestHuffmanCoding(unittest.TestCase):
@@ -486,11 +523,16 @@ class TestRunLengthCoding(unittest.TestCase):
 
     def test_run_length_decode(self):
         test_input = [(1, -2), ZRL, (0, -1), ZRL, (2, -1), (0, -1), EOB]
-        consumed_expect = (0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                           0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                           0, 0, 0, -1, -1)
+        expect = (0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                  0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                  0, 0, 0, -1, -1)
         result = decode_run_length(test_input)
-        self.assertSequenceEqual(tuple(result), consumed_expect)
+        self.assertSequenceEqual(result, expect)
+
+        test_EOB = [EOB]
+        expect_EOB = ()
+        result_EOB = decode_run_length(test_EOB)
+        self.assertSequenceEqual(result_EOB, expect_EOB)
 
     def test_invertible(self):
         """Run length codec is invertible iff there is no trailing zero when

@@ -132,12 +132,10 @@ class Decoder:
 
         self.data = data
 
-        # A nested dictionary containing decoded data, differential DC
-        # and run-length AC.
-        self._huffman_decoded = None
-        # A list containing all DC of blocks.
+        # A dictionary containing all DC of blocks.
         self._dc = None
-        # A nested 2D list containing all AC of blocks without reshape.
+        # A dictionary with nested 2D list containing all AC of blocks without
+        # zig-zag iteration.
         self._ac = None
 
     def decode(self, subsampling_mode):
@@ -167,26 +165,27 @@ class Decoder:
             self._get_ac()
         return self._ac
 
-    @property
-    def huffman_decoded(self):
-        if self._huffman_decoded is None:
-            self._get_huffman_decoded()
-        return self._huffman_decoded
-
     def _get_dc(self):
-        pass
+        self._dc = {
+            layer: decode_differential(decode_huffman(value, DC, layer))
+            for layer, value in self.data[DC].items()
+        }
 
     def _get_ac(self):
-        pass
+        def isplit(iterable, splitter):
+            ret = []
+            for item in iterable:
+                ret.append(item)
+                if item == splitter:
+                    yield ret
+                    ret = []
 
-    def _get_huffman_decoded(self):
-        self._huffman_decoded = {
-            current: {
-                layer: decode_huffman(value, current, layer)
-                for layer, value in sub_dict.items()
-            }
-            for current, sub_dict in self.data.items()
-        }
+        self._ac = {}
+        for layer, value in self.data[AC].items():
+            self._ac[layer] = tuple(
+                decode_run_length(pairs)
+                for pairs in isplit(decode_huffman(value, AC, layer), EOB)
+            )
 
 
 def encode_huffman(value, layer_type):
@@ -277,12 +276,10 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
         ]
         err_cache = current_slice
         while current_slice:
-            try:
+            if (current_slice in
+                    HUFFMAN_CATEGORY_CODEWORD[dc_ac][layer_type].inv):
                 key = (HUFFMAN_CATEGORY_CODEWORD[dc_ac][layer_type]
                        .inv[current_slice])
-            except KeyError:
-                current_slice = current_slice[:-1]
-            else:
                 if dc_ac == DC:
                     size = key
                     if size == 0:
@@ -304,6 +301,8 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
 
                 current_idx += len(current_slice) + size
                 break
+            else:
+                current_slice = current_slice[:-1]
         else:
             raise KeyError(
                 f'Cannot find any prefix of {err_cache} in Huffman table.'
