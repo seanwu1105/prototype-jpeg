@@ -3,7 +3,7 @@ import math
 import numpy as np
 from scipy.fftpack import dct
 
-from .codec import DC, AC, LUMINANCE, CHROMINANCE
+from .codec import Encoder, Decoder, DC, AC, LUMINANCE, CHROMINANCE
 from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
                     block_combine, dct2d, idct2d, quantize)
 # from .codec import encode, decode
@@ -79,11 +79,11 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
             # Rounding
             data[key] = np.rint(data[key]).astype(int)
         # Entropy Encoder
-        # encode(data)
+        encoded = Encoder(data).encode()
 
-        # Insert Header
+        # TODO: Insert Header
 
-        return data
+        return encoded
 
     # Grey Level Image
     raise NotImplementedError('Grey level image is not yet implemented.')
@@ -121,8 +121,8 @@ def extract(byte_seq):
     if not grey_level:
         # TODO: Entropy Decoder
         data = byte_seq
-        # data = decode(data)
-        #   Do something to get decoded data having the following format:
+        data = Decoder(data).decode()
+        #   The decoded data having the following format:
         #   data = {
         #       'y': array_of_blocks,
         #       'cb': array_of_blocks,
@@ -175,6 +175,14 @@ def extract(byte_seq):
                 .flatten()
                 .astype(np.uint8))
     return data
+
+
+def write_header(size, quality, grey_level, subsampling_mode):
+    pass
+
+
+def read_header(bit_seq):
+    pass
 
 
 def school_round(val):

@@ -13,9 +13,7 @@ def main():
             quality=50,
             subsampling_mode=1
         )
-        print(type(compressed))
         extracted = extract(compressed)
-        print(type(extracted))
         show_raw_images(
             ('tests/images/rgb/Lena.raw', extracted),
             ((512, 512), (512, 512)),

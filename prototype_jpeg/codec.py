@@ -64,29 +64,19 @@ class Encoder:
                 chrominance encoded layers. The format is:
                 ```
                 ret = {
-                    DC: {
-                        LUMINANCE: '01...'
-                        CHROMINANCE: '01...'
-                    }
-                    AC: {
-                        LUMINANCE: '01...'
-                        CHROMINANCE: '01...'
-                    }
+                    DC: {LUMINANCE: '01...', CHROMINANCE: '01...'},
+                    AC: {LUMINANCE: '01...', CHROMINANCE: '01...'}
                 }
                 ```
         """
 
         ret = {DC: {}, AC: {}}
         for layer_type in (LUMINANCE, CHROMINANCE):
-            ret[DC][layer_type] = functools.reduce(
-                operator.add,
-                (encode_huffman(v, layer_type)
-                 for v in self.diff_dc[layer_type])
-            )
-            ret[AC][layer_type] = functools.reduce(
-                operator.add,
-                (encode_huffman(v, layer_type)
-                 for v in self.run_length_ac[layer_type])
+            ret[DC][layer_type] = ''.join(encode_huffman(v, layer_type)
+                                          for v in self.diff_dc[layer_type])
+            ret[AC][layer_type] = ''.join(
+                encode_huffman(v, layer_type)
+                for v in self.run_length_ac[layer_type]
             )
         return ret
 
@@ -125,8 +115,8 @@ class Decoder:
             data {dict} -- A dictionary containing DC/AC luminance and
                 chrominance bit array as following format.
                 {
-                    DC: {LUMINANCE: b('...'), CHROMINANCE: b('...')},
-                    AC: {LUMINANCE: b('...'), CHROMINANCE: b('...')}
+                    DC: {LUMINANCE: '.01..', CHROMINANCE: '.01..'},
+                    AC: {LUMINANCE: '.01..', CHROMINANCE: '.01..'}
                 }
         """
 
@@ -222,7 +212,7 @@ def encode_huffman(value, layer_type):
                     return (i, j)
         raise ValueError('Cannot find the target value in the table.')
 
-    if isinstance(value, int):  # DC
+    if not isinstance(value, collections.Iterable):  # DC
         if value <= -2048 or value >= 2048:
             raise ValueError(
                 f'Differential DC {value} should be within [-2047, 2047].'
