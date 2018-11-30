@@ -1,4 +1,4 @@
-from collections import OrderedDict
+import collections
 
 import numpy as np
 from scipy.fftpack import dct, idct
@@ -19,7 +19,7 @@ def rgb2ycbcr(r, g, b):
         OrderDict -- An ordered dictionary containing Y, Cb, Cr layers.
     """
 
-    return OrderedDict((
+    return collections.OrderedDict((
         ('y', + 0.299 * r + 0.587 * g + 0.114 * b),
         ('cb', - 0.168736 * r - 0.331264 * g + 0.5 * b),
         ('cr', + 0.5 * r - 0.418688 * g - 0.081312 * b)
@@ -41,7 +41,7 @@ def ycbcr2rgb(y, cb, cr):
         dict -- A dictionary containing R, G, B layers.
     """
 
-    return OrderedDict((
+    return collections.OrderedDict((
         ('r', y + 1.402 * cr),
         ('g', y - 0.344136 * cb - 0.714136 * cr),
         ('b', y + 1.772 * cb)

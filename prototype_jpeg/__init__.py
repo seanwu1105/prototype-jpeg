@@ -1,12 +1,12 @@
 import math
 
+from bitarray import bitarray, bits2bytes
 import numpy as np
 from scipy.fftpack import dct
 
 from .codec import Encoder, Decoder, DC, AC, LUMINANCE, CHROMINANCE
 from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
                     block_combine, dct2d, idct2d, quantize)
-# from .codec import encode, decode
 
 
 #############################################################
@@ -81,33 +81,45 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
         # Entropy Encoder
         encoded = Encoder(data).encode()
 
-        # TODO: Insert Header
-
-        return encoded
+        # Combine data as binary.
+        bits = bitarray(''.join(d for c in encoded.values()
+                                for d in c.values()))
+        return {
+            'data': bits,
+            'header': {
+                'size': size,
+                'grey_level': grey_level,
+                'quality': quality,
+                'subsampling_mode': subsampling_mode,
+                # Remaining bits length is the fake filled bits for 8 bits as a
+                # byte.
+                'remaining_bits_length': bits2bytes(len(bits)) * 8 - len(bits),
+                # The order of data slice lengths is:
+                #   (DC.LUM, DC.CHR, AC.LUM, AC.CHR)
+                'data_slice_lengths': (
+                    len(encoded[DC][LUMINANCE]),
+                    len(encoded[DC][CHROMINANCE]),
+                    len(encoded[AC][LUMINANCE]),
+                    len(encoded[AC][CHROMINANCE])
+                )
+            }
+        }
 
     # Grey Level Image
     raise NotImplementedError('Grey level image is not yet implemented.')
 
 
-def extract(byte_seq):
-    # TODO: Read Header
-    size = (512, 512)
-    grey_level = False
-    quality = 50
-    subsampling_mode = 1
-    # IF RGB #########################################
-    positions = {
-        DC: {LUMINANCE: int, CHROMINANCE: int},
-        AC: {LUMINANCE: int, CHROMINANCE: int}
-    }
-    # IF GREY LEVEL ##################################
-    # Only LUMINANCE encoding table is used.
-    positions = {DC: int, AC: int}
-    ##################################################
-    # Slice the byte_seq into structured bit_seq (data).
-    # sorted_flatten_positions = sorted((v for t in (DC, AC)
-    #                                    for v in positions[t].values()))
-    # print(sorted_flatten_positions.index(10) + 1)
+def extract(byte_seq, header):
+    bits = bitarray()
+    bits.fromfile(byte_seq)
+    bits = bits.to01()
+    # Read Header
+    size = header['size']
+    grey_level = header['grey_level']
+    quality = header['quality']
+    subsampling_mode = header['subsampling_mode']
+    remaining_bits_length = header['remaining_bits_length']
+    dsls = header['data_slice_lengths']  # data_slice_lengths
 
     # Calculate the size after subsampling.
     if subsampling_mode == 4:
@@ -118,9 +130,23 @@ def extract(byte_seq):
             school_round(size[1] / 2)
         )
 
-    if not grey_level:
-        # TODO: Entropy Decoder
-        data = byte_seq
+    if not grey_level:  # RGB Image
+        # Preprocessing Byte Sequence:
+        #   1. Remove Remaining (Fake Filled) Bits.
+        #   2. Slice Bits into Dictionary Data Structure for `Decoder`.
+        #   data_slice_lengths = (DC.LUM, DC.CHR, AC.LUM, AC.CHR)
+        bits = bits[:-remaining_bits_length]
+        data = {
+            DC: {
+                LUMINANCE: bits[:dsls[0]],
+                CHROMINANCE: bits[dsls[0]:dsls[0] + dsls[1]]
+            },
+            AC: {
+                LUMINANCE: bits[dsls[0] + dsls[1]:dsls[0] + dsls[1] + dsls[2]],
+                CHROMINANCE: bits[dsls[0] + dsls[1] + dsls[2]:]
+            }
+        }
+
         data = Decoder(data).decode()
         #   The decoded data having the following format:
         #   data = {
@@ -174,15 +200,12 @@ def extract(byte_seq):
         data = (np.dstack((data.values()))
                 .flatten()
                 .astype(np.uint8))
+
+    else:  # Grey Level Image
+        #   Only LUMINANCE encoding table is used.
+        #   data_slice_lengths = (DC: int, AC: int)
+        raise NotImplementedError()
     return data
-
-
-def write_header(size, quality, grey_level, subsampling_mode):
-    pass
-
-
-def read_header(bit_seq):
-    pass
 
 
 def school_round(val):

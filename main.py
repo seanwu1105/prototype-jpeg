@@ -5,17 +5,46 @@ from prototype_jpeg import compress, extract
 
 
 def main():
-    with open('tests/images/rgb/Lena.raw', 'rb') as img_file:
-        compressed = compress(
-            img_file,
-            size=(512, 512),
-            grey_level=False,
-            quality=50,
-            subsampling_mode=1
-        )
-        extracted = extract(compressed)
+    specs = ({
+        'fn': 'tests/images/rgb/Baboon.raw',
+        'size': (512, 512),
+        'grey_level': False,
+        'quality': 50,
+        'subsampling_mode': 1
+    }, {
+        'fn': 'tests/images/rgb/Lena.raw',
+        'size': (512, 512),
+        'grey_level': False,
+        'quality': 50,
+        'subsampling_mode': 1
+    })
+    for spec in specs:
+        with open(spec['fn'], 'rb') as raw_file:
+            compressed = compress(
+                raw_file,
+                size=spec['size'],
+                grey_level=spec['grey_level'],
+                quality=spec['quality'],
+                subsampling_mode=spec['subsampling_mode']
+            )
+        with open('compressed.protojpg', 'wb') as compressed_file:
+            compressed['data'].tofile(compressed_file)
+        header = compressed['header']
+
+        with open('compressed.protojpg', 'rb') as compressed_file:
+            extracted = extract(
+                compressed_file,
+                header={
+                    'size': header['size'],
+                    'grey_level': header['grey_level'],
+                    'quality': header['quality'],
+                    'subsampling_mode': header['subsampling_mode'],
+                    'remaining_bits_length': header['remaining_bits_length'],
+                    'data_slice_lengths': header['data_slice_lengths']
+                }
+            )
         show_raw_images(
-            ('tests/images/rgb/Lena.raw', extracted),
+            (spec['fn'], extracted),
             ((512, 512), (512, 512)),
             ('Original', 'Compressed and Extracted')
         )

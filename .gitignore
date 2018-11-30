@@ -121,5 +121,5 @@ dmypy.json
 temp*.*
 compressed*
 extract*
-*.protojpeg
+*.protojpg
 *.lprof
