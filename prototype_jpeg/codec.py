@@ -25,7 +25,7 @@ class Encoder:
         # }
         self.data = {
             LUMINANCE: data['y'],
-            CHROMINANCE: np.concatenate((data['cb'], data['cr']))
+            CHROMINANCE: np.vstack((data['cb'], data['cr']))
         }
 
         # The differential DC in blocks order: 'y', 'cb', 'cr'.
@@ -138,21 +138,31 @@ class Decoder:
         # zig-zag iteration.
         self._ac = None
 
-    def decode(self, subsampling_mode):
+    def decode(self):
+        if len(self.dc[CHROMINANCE]) % 2 or len(self.ac[CHROMINANCE]) % 2:
+            raise ValueError('The length of DC chrominance '
+                             f'{len(self.dc[CHROMINANCE])} or AC chrominance '
+                             f'{len(self.ac[CHROMINANCE])} cannot be divided '
+                             'by 2 evenly to seperate into Cb and Cr.')
+
         shaped = {}
         for layer in (LUMINANCE, CHROMINANCE):
             if len(self.dc[layer]) != len(self.ac[layer]):
-                raise ValueError(f'DC {layer} size {len(self.dc[layer])} is not '
-                                 f'equal to AC {layer} size '
+                raise ValueError(f'DC {layer} size {len(self.dc[layer])} is not'
+                                 f' equal to AC {layer} size '
                                  f'{len(self.ac[layer])}.')
 
-            # for dc, ac in zip(self.dc[layer], self.ac[layer]):
-            #     inverse_iter_zig_zag(dc + ac)
+            shaped[layer] = np.array(tuple(
+                inverse_iter_zig_zag((dc, ) + ac, size=8)
+                for dc, ac in zip(self.dc[layer], self.ac[layer])
+            ))
+
+        cb, cr = np.split(shaped[CHROMINANCE], 2)
 
         return collections.OrderedDict((
-            ('y', np.array()),
-            ('cb', np.array()),
-            ('cr', np.array()),
+            ('y', shaped[LUMINANCE]),
+            ('cb', cb),
+            ('cr', cr),
         ))
 
     @property
@@ -370,13 +380,14 @@ def iter_zig_zag(data):
             y, x = move_zig_zag_idx(y, x, data.shape[0])
 
 
-def inverse_iter_zig_zag(seq, fill=0):
+def inverse_iter_zig_zag(seq, size=None, fill=0):
     def smallest_square_larger_than(value):
         for ret in itertools.count():
             if ret**2 >= value:
                 return ret
 
-    size = smallest_square_larger_than(len(seq))
+    if size is None:
+        size = smallest_square_larger_than(len(seq))
     seq = tuple(seq) + (fill, ) * (size**2 - len(seq))
     ret = np.empty((size, size), dtype=int)
     x, y = 0, 0
