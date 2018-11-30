@@ -5,6 +5,7 @@ from prototype_jpeg import compress, extract
 
 
 def main():
+    # TODO: Move this to test_integration and call them.
     specs = ({
         'fn': 'tests/images/rgb/Baboon.raw',
         'size': (512, 512),

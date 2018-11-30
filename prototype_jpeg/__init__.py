@@ -105,8 +105,61 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
             }
         }
 
-    # Grey Level Image
-    raise NotImplementedError('Grey level image is not yet implemented.')
+    # # Grey Level Image
+
+    # # Level Offset
+    # data = img_arr - 128
+
+    # # Pad 2D Data to 8N * 8N
+    # nrows, ncols = data.shape
+    # data = np.pad(
+    #     data,
+    #     (
+    #         (0, (nrows // 8 + 1) * 8 - nrows if nrows % 8 else 0),
+    #         (0, (ncols // 8 + 1) * 8 - ncols if ncols % 8 else 0)
+    #     ),
+    #     mode='constant'
+    # )
+
+    # # Block Slicing
+    # data = block_slice(data, 8, 8)
+
+    # for idx, block in enumerate(data):
+    #     # 2D DCT
+    #     data[idx] = dct2d(block)
+
+    #     # Quantization
+    #     data[idx] = quantize(data[idx], 'y', quality=quality)
+
+    # # Rounding
+    # data = np.rint(data).astype(int)
+    # raise Exception('fuck') -------------------------------------------
+    # # Entropy Encoder
+    # encoded = Encoder(data).encode()
+
+    # # Combine data as binary.
+    # bits = bitarray(''.join(d for c in encoded.values()
+    #                         for d in c.values()))
+    # return {
+    #     'data': bits,
+    #     'header': {
+    #         'size': size,
+    #         'grey_level': grey_level,
+    #         'quality': quality,
+    #         'subsampling_mode': subsampling_mode,
+    #         # Remaining bits length is the fake filled bits for 8 bits as a
+    #         # byte.
+    #         'remaining_bits_length': bits2bytes(len(bits)) * 8 - len(bits),
+    #         # The order of data slice lengths is:
+    #         #   (DC.LUM, DC.CHR, AC.LUM, AC.CHR)
+    #         'data_slice_lengths': (
+    #             len(encoded[DC][LUMINANCE]),
+    #             len(encoded[DC][CHROMINANCE]),
+    #             len(encoded[AC][LUMINANCE]),
+    #             len(encoded[AC][CHROMINANCE])
+    #         )
+    #     }
+    # }
 
 
 def extract(byte_seq, header):
