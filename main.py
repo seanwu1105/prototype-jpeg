@@ -6,18 +6,32 @@ from prototype_jpeg import compress, extract
 
 def main():
     # TODO: Move this to test_integration and call them.
-    specs = ({
-        'fn': 'tests/images/rgb/Baboon.raw',
+    specs = (
+    #     {
+    #     'fn': 'tests/images/rgb/Baboon.raw',
+    #     'size': (512, 512),
+    #     'grey_level': False,
+    #     'quality': 50,
+    #     'subsampling_mode': 2
+    # }, {
+    #     'fn': 'tests/images/rgb/Lena.raw',
+    #     'size': (512, 512),
+    #     'grey_level': False,
+    #     'quality': 50,
+    #     'subsampling_mode': 2
+    # },
+    {
+        'fn': 'tests/images/grey_level/Baboon.raw',
         'size': (512, 512),
-        'grey_level': False,
+        'grey_level': True,
         'quality': 50,
-        'subsampling_mode': 1
+        'subsampling_mode': 2
     }, {
-        'fn': 'tests/images/rgb/Lena.raw',
+        'fn': 'tests/images/grey_level/Lena.raw',
         'size': (512, 512),
-        'grey_level': False,
+        'grey_level': True,
         'quality': 50,
-        'subsampling_mode': 1
+        'subsampling_mode': 2
     })
     for spec in specs:
         with open(spec['fn'], 'rb') as raw_file:
@@ -46,8 +60,9 @@ def main():
             )
         show_raw_images(
             (spec['fn'], extracted),
-            ((512, 512), (512, 512)),
-            ('Original', 'Compressed and Extracted')
+            (spec['size'], spec['size']),
+            ('Original', 'Compressed and Extracted'),
+            grey_level=spec['grey_level']
         )
 
 

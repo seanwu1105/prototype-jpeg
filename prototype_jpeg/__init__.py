@@ -43,42 +43,55 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
         size if grey_level else (*size, 3)
     )
 
-    if not grey_level:
+    if grey_level:
+        data = {Y: img_arr}
+
+    else:  # RGB
         # Color Space Conversion (w/o Level Offset)
         data = rgb2ycbcr(*(img_arr[:, :, idx] for idx in range(3)))
 
         # Subsampling
-        data['cb'] = downsample(data['cb'], subsampling_mode)
-        data['cr'] = downsample(data['cr'], subsampling_mode)
+        data[CB] = downsample(data[CB], subsampling_mode)
+        data[CR] = downsample(data[CR], subsampling_mode)
 
-        # Level Offset
-        data['y'] = data['y'] - 128
+    # Level Offset
+    data[Y] = data[Y] - 128
 
-        for key, layer in data.items():
-            nrows, ncols = layer.shape
+    for key, layer in data.items():
+        nrows, ncols = layer.shape
 
-            # Pad Layers to 8N * 8N
-            data[key] = np.pad(
-                layer,
-                (
-                    (0, (nrows // 8 + 1) * 8 - nrows if nrows % 8 else 0),
-                    (0, (ncols // 8 + 1) * 8 - ncols if ncols % 8 else 0)
-                ),
-                mode='constant'
-            )
+        # Pad Layers to 8N * 8N
+        data[key] = np.pad(
+            layer,
+            (
+                (0, (nrows // 8 + 1) * 8 - nrows if nrows % 8 else 0),
+                (0, (ncols // 8 + 1) * 8 - ncols if ncols % 8 else 0)
+            ),
+            mode='constant'
+        )
 
-            # Block Slicing
-            data[key] = block_slice(data[key], 8, 8)
+        # Block Slicing
+        data[key] = block_slice(data[key], 8, 8)
 
-            for idx, block in enumerate(data[key]):
-                # 2D DCT
-                data[key][idx] = dct2d(block)
+        for idx, block in enumerate(data[key]):
+            # 2D DCT
+            data[key][idx] = dct2d(block)
 
-                # Quantization
-                data[key][idx] = quantize(data[key][idx], key, quality=quality)
+            # Quantization
+            data[key][idx] = quantize(data[key][idx], key, quality=quality)
 
-            # Rounding
-            data[key] = np.rint(data[key]).astype(int)
+        # Rounding
+        data[key] = np.rint(data[key]).astype(int)
+
+    if grey_level:
+        # Entropy Encoder
+        encoded = Encoder(data[Y], LUMINANCE).encode()
+
+        # Combine grey level data as binary in the order:
+        #   DC, AC
+        order = (encoded[DC], encoded[AC])
+
+    else:  # RGB
         # Entropy Encoder
         encoded = {
             LUMINANCE: Encoder(data[Y], LUMINANCE).encode(),
@@ -88,91 +101,33 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
             ).encode()
         }
 
-        # Combine data as binary in the order:
+        # Combine RGB data as binary in the order:
         #   LUMINANCE.DC, LUMINANCE.AC, CHROMINANCE.DC, CHROMINANCE.AC
-        bits = bitarray(''.join((
-            encoded[LUMINANCE][DC], encoded[LUMINANCE][AC],
-            encoded[CHROMINANCE][DC], encoded[CHROMINANCE][AC]
-        )))
-        return {
-            'data': bits,
-            'header': {
-                'size': size,
-                'grey_level': grey_level,
-                'quality': quality,
-                'subsampling_mode': subsampling_mode,
-                # Remaining bits length is the fake filled bits for 8 bits as a
-                # byte.
-                'remaining_bits_length': bits2bytes(len(bits)) * 8 - len(bits),
-                # The order of data slice lengths is:
-                #   LUMINANCE.DC, LUMINANCE.AC, CHROMINANCE.DC, CHROMINANCE.AC
-                'data_slice_lengths': (
-                    len(encoded[LUMINANCE][DC]),
-                    len(encoded[LUMINANCE][AC]),
-                    len(encoded[CHROMINANCE][DC]),
-                    len(encoded[CHROMINANCE][AC])
-                )
-            }
+        order = (encoded[LUMINANCE][DC], encoded[LUMINANCE][AC],
+                 encoded[CHROMINANCE][DC], encoded[CHROMINANCE][AC])
+
+    bits = bitarray(''.join(order))
+    return {
+        'data': bits,
+        'header': {
+            'size': size,
+            'grey_level': grey_level,
+            'quality': quality,
+            'subsampling_mode': subsampling_mode,
+            # Remaining bits length is the fake filled bits for 8 bits as a
+            # byte.
+            'remaining_bits_length': bits2bytes(len(bits)) * 8 - len(bits),
+            'data_slice_lengths': tuple(len(d) for d in order)
         }
-
-    # # Grey Level Image
-
-    # # Level Offset
-    # data = img_arr - 128
-
-    # # Pad 2D Data to 8N * 8N
-    # nrows, ncols = data.shape
-    # data = np.pad(
-    #     data,
-    #     (
-    #         (0, (nrows // 8 + 1) * 8 - nrows if nrows % 8 else 0),
-    #         (0, (ncols // 8 + 1) * 8 - ncols if ncols % 8 else 0)
-    #     ),
-    #     mode='constant'
-    # )
-
-    # # Block Slicing
-    # data = block_slice(data, 8, 8)
-
-    # for idx, block in enumerate(data):
-    #     # 2D DCT
-    #     data[idx] = dct2d(block)
-
-    #     # Quantization
-    #     data[idx] = quantize(data[idx], 'y', quality=quality)
-
-    # # Rounding
-    # data = np.rint(data).astype(int)
-    # raise Exception('fuck') -------------------------------------------
-    # # Entropy Encoder
-    # encoded = Encoder(data).encode()
-
-    # # Combine data as binary.
-    # bits = bitarray(''.join(d for c in encoded.values()
-    #                         for d in c.values()))
-    # return {
-    #     'data': bits,
-    #     'header': {
-    #         'size': size,
-    #         'grey_level': grey_level,
-    #         'quality': quality,
-    #         'subsampling_mode': subsampling_mode,
-    #         # Remaining bits length is the fake filled bits for 8 bits as a
-    #         # byte.
-    #         'remaining_bits_length': bits2bytes(len(bits)) * 8 - len(bits),
-    #         # The order of data slice lengths is:
-    #         #   (DC.LUM, DC.CHR, AC.LUM, AC.CHR)
-    #         'data_slice_lengths': (
-    #             len(encoded[DC][LUMINANCE]),
-    #             len(encoded[DC][CHROMINANCE]),
-    #             len(encoded[AC][LUMINANCE]),
-    #             len(encoded[AC][CHROMINANCE])
-    #         )
-    #     }
-    # }
+    }
 
 
 def extract(byte_seq, header):
+    def school_round(val):
+        if float(val) % 1 >= 0.5:
+            return math.ceil(val)
+        return round(val)
+
     bits = bitarray()
     bits.fromfile(byte_seq)
     bits = bits.to01()
@@ -193,15 +148,23 @@ def extract(byte_seq, header):
             school_round(size[1] / 2)
         )
 
-    if not grey_level:  # RGB Image
-        # Preprocessing Byte Sequence:
-        #   1. Remove Remaining (Fake Filled) Bits.
-        #   2. Slice Bits into Dictionary Data Structure for `Decoder`.
+    # Preprocessing Byte Sequence:
+    #   1. Remove Remaining (Fake Filled) Bits.
+    #   2. Slice Bits into Dictionary Data Structure for `Decoder`.
 
-        # The order of dsls is:
+    bits = bits[:-remaining_bits_length]
+
+    if grey_level:
+        # The order of dsls (grey level) is:
+        #   DC, AC
+        sliced = {
+            DC: bits[:dsls[0]],
+            AC: bits[dsls[0]:]
+        }
+    else:  # RGB
+        # The order of dsls (RGB) is:
         #   LUMINANCE.DC, LUMINANCE.AC, CHROMINANCE.DC, CHROMINANCE.AC
-        bits = bits[:-remaining_bits_length]
-        data = {
+        sliced = {
             LUMINANCE: {
                 DC: bits[:dsls[0]],
                 AC: bits[dsls[0]:dsls[0] + dsls[1]]
@@ -212,69 +175,63 @@ def extract(byte_seq, header):
             }
         }
 
-        # Huffman Decoding
-        cb, cr = np.split(Decoder(data[CHROMINANCE], CHROMINANCE).decode(), 2)
+    # Huffman Decoding
+    if grey_level:
+        data = {Y: Decoder(sliced, LUMINANCE).decode()}
+    else:
+        cb, cr = np.split(Decoder(
+            sliced[CHROMINANCE],
+            CHROMINANCE
+        ).decode(), 2)
         data = {
-            Y: Decoder(data[LUMINANCE], LUMINANCE).decode(),
+            Y: Decoder(sliced[LUMINANCE], LUMINANCE).decode(),
             CB: cb,
             CR: cr
         }
 
-        for key, layer in data.items():
-            for idx, block in enumerate(layer):
-                # Inverse Quantization
-                layer[idx] = quantize(
-                    block,
-                    key,
-                    quality=quality,
-                    inverse=True
-                )
+    for key, layer in data.items():
+        for idx, block in enumerate(layer):
+            # Inverse Quantization
+            layer[idx] = quantize(
+                block,
+                key,
+                quality=quality,
+                inverse=True
+            )
 
-                # 2D IDCT.
-                layer[idx] = idct2d(layer[idx])
+            # 2D IDCT.
+            layer[idx] = idct2d(layer[idx])
 
-            # Calculate the size after subsampling and padding.
-            if key == 'y':
-                padded_size = ((s // 8 + 1) * 8 if s % 8 else s for s in size)
-            else:
-                padded_size = ((s // 8 + 1) * 8 if s % 8 else s
-                               for s in subsampled_size)
-            # Combine the blocks into original image
-            data[key] = block_combine(layer, *padded_size)
+        # Calculate the size after subsampling and padding.
+        if key == Y:
+            padded_size = ((s // 8 + 1) * 8 if s % 8 else s for s in size)
+        else:
+            padded_size = ((s // 8 + 1) * 8 if s % 8 else s
+                           for s in subsampled_size)
+        # Combine the blocks into original image
+        data[key] = block_combine(layer, *padded_size)
 
-        # Clip Padded Image
-        data['y'] = data['y'][:size[0], :size[1]]
-        data['cb'] = data['cb'][:subsampled_size[0], :subsampled_size[1]]
-        data['cr'] = data['cr'][:subsampled_size[0], :subsampled_size[1]]
+    # Inverse Level Offset
+    data[Y] = data[Y] + 128
 
-        # Inverse Level Offset
-        data['y'] = data['y'] + 128
+    # Clip Padded Image
+    data[Y] = data[Y][:size[0], :size[1]]
+    if not grey_level:
+        data[CB] = data[CB][:subsampled_size[0], :subsampled_size[1]]
+        data[CR] = data[CR][:subsampled_size[0], :subsampled_size[1]]
 
         # Upsampling and Clipping
-        data['cb'] = upsample(data['cb'], subsampling_mode)[:size[0], :size[1]]
-        data['cr'] = upsample(data['cr'], subsampling_mode)[:size[0], :size[1]]
+        data[CB] = upsample(data[CB], subsampling_mode)[:size[0], :size[1]]
+        data[CR] = upsample(data[CR], subsampling_mode)[:size[0], :size[1]]
 
         # Color Space Conversion
         data = ycbcr2rgb(**data)
 
-        # Rounding, Clipping and Flatten
-        for k, v in data.items():
-            data[k] = np.rint(np.clip(v, 0, 255)).flatten()
+    # Rounding, Clipping and Flatten
+    for k, v in data.items():
+        data[k] = np.rint(np.clip(v, 0, 255)).flatten()
 
-        # Combine layers into signle raw data.
-        data = (np.dstack((data.values()))
-                .flatten()
-                .astype(np.uint8))
-
-    else:  # Grey Level Image
-        #   Only LUMINANCE encoding table is used.
-        #   data_slice_lengths = (DC: int, AC: int)
-        raise NotImplementedError()
-
-    return data
-
-
-def school_round(val):
-    if float(val) % 1 >= 0.5:
-        return math.ceil(val)
-    return round(val)
+    # Combine layers into signle raw data.
+    return (np.dstack((data.values()))
+            .flatten()
+            .astype(np.uint8))
