@@ -1,9 +1,7 @@
-import collections
 import math
 
 from bitarray import bitarray, bits2bytes
 import numpy as np
-from scipy.fftpack import dct
 
 from .codec import Encoder, Decoder, DC, AC, LUMINANCE, CHROMINANCE
 from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
@@ -34,11 +32,11 @@ from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
 #       process increase the possibilities)
 #   Quality Factor
 
-# TODO Improvements:
-#   Multiprocessing for different blocks, DC and AC VLC
-
 
 def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
+    if quality <= 0 or quality > 95:
+        raise ValueError('Quality should within (0, 95].')
+
     img_arr = np.fromfile(byte_seq, dtype=np.uint8).reshape(
         size if grey_level else (*size, 3)
     )
@@ -153,7 +151,8 @@ def extract(byte_seq, header):
     #   1. Remove Remaining (Fake Filled) Bits.
     #   2. Slice Bits into Dictionary Data Structure for `Decoder`.
 
-    bits = bits[:-remaining_bits_length]
+    if remaining_bits_length:
+        bits = bits[:-remaining_bits_length]
 
     if grey_level:
         # The order of dsls (grey level) is:

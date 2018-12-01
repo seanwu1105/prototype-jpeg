@@ -4,7 +4,8 @@ import unittest
 import numpy as np
 
 from prototype_jpeg.utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample,
-                                  block_slice, block_combine, dct2d, idct2d, quantize)
+                                  block_slice, block_combine, dct2d, idct2d,
+                                  quantize)
 
 
 class TestColorSpaceConversion(unittest.TestCase):

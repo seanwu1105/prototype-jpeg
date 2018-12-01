@@ -79,11 +79,13 @@ def downsample(arr, mode):
 
     Arguments:
         arr {2d numpy array} -- The target array.
-        mode {1 or 2} -- Downsample ratio (4:mode).
+        mode {1 or 2 or 4} -- Downsample ratio (4:mode).
 
     Returns:
         2d numpy array -- Downsampled array.
     """
+    if mode not in {1, 2, 4}:
+        raise ValueError(f'Mode ({mode}) must be 1, 2 or 4.')
 
     if mode == 4:
         return arr
@@ -95,11 +97,13 @@ def upsample(arr, mode):
 
     Arguments:
         arr {2d numpy array} -- The target array.
-        mode {1 or 2} -- Upsample ratio (4:mode).
+        mode {1 or 2 or 4} -- Upsample ratio (4:mode).
 
     Returns:
         2d numpy array -- Upsampled array.
     """
+    if mode not in {1, 2, 4}:
+        raise ValueError(f'Mode ({mode}) must be 1, 2 or 4.')
 
     if mode == 4:
         return arr
@@ -138,9 +142,9 @@ def block_combine(arr, nrows, ncols):
     Raise:
         ValueError -- The size of `arr` is not equal to `nrows * ncols`.
     """
-
     if arr.size != nrows * ncols:
-        raise ValueError('The size of arr should be equal to nrows * ncols')
+        raise ValueError(f'The size of arr ({arr.size}) should be equal to '
+                         f'nrows * ncols ({nrows} * {ncols})')
 
     _, block_nrows, block_ncols = arr.shape
 

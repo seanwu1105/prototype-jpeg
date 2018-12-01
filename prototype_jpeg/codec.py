@@ -1,7 +1,5 @@
 import collections
 import itertools
-import functools
-import operator
 
 from bidict import bidict
 import numpy as np
