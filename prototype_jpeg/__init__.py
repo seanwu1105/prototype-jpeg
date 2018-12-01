@@ -34,7 +34,7 @@ from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
 #       process increase the possibilities)
 #   Quality Factor
 
-# Improvements:
+# TODO Improvements:
 #   Multiprocessing for different blocks, DC and AC VLC
 
 
@@ -44,7 +44,7 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
     )
 
     if grey_level:
-        data = {Y: img_arr}
+        data = {Y: img_arr.astype(float)}
 
     else:  # RGB
         # Color Space Conversion (w/o Level Offset)
@@ -131,6 +131,7 @@ def extract(byte_seq, header):
     bits = bitarray()
     bits.fromfile(byte_seq)
     bits = bits.to01()
+
     # Read Header
     size = header['size']
     grey_level = header['grey_level']
