@@ -1,7 +1,6 @@
 import collections
 import itertools
 import unittest
-from unittest import mock
 
 import numpy as np
 
@@ -11,12 +10,13 @@ from prototype_jpeg.codec import (
     decode_run_length, EOB, ZRL, DC, AC, LUMINANCE, CHROMINANCE,
     HUFFMAN_CATEGORY_CODEWORD
 )
+from prototype_jpeg.utils import Y, CB, CR
 
 
 class TestEncoder(unittest.TestCase):
-    def test_init_diff_dc(self):
-        data = collections.OrderedDict((
-            ('y', np.array([
+    def test_diff_dc(self):
+        test_inpputs = (
+            (Y, np.array([
                 [[14, 1, 0, -1, 0, 0, 0, 0],
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -42,7 +42,7 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
             ])),
-            ('cb', np.array([
+            (CB, np.array([
                 [[-14, 0, 0, 0, 0, 0, 0, 0],
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -68,7 +68,7 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
             ])),
-            ('cr', np.array([
+            (CR, np.array([
                 [[22, 1, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -94,16 +94,18 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
             ]))
-        ))
-        expect = {
-            LUMINANCE: (14, 30, -38),
-            CHROMINANCE: (-14, 20, -6, 22, -11, 6)
-        }
-        self.assertDictEqual(Encoder(data).diff_dc, expect)
+        )
+        expects = (
+            (14, 30, -38),
+            (-14, 20, -6),
+            (22, -11, 6)
+        )
+        for (layer, data), expect in zip(test_inpputs, expects):
+            self.assertSequenceEqual(Encoder(data, layer).diff_dc, expect)
 
-    def test_init_run_length_ac(self):
-        data = collections.OrderedDict((
-            ('y', np.array([
+    def test_run_length_ac(self):
+        test_inputs = (
+            (Y, np.array([
                 [[14, 1, 0, -1, 0, 0, 0, 0],
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -121,7 +123,7 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, -99]]
             ])),
-            ('cb', np.array([
+            (CB, np.array([
                 [[-14, 0, 0, 0, 0, 0, 0, 0],
                  [1, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -131,7 +133,7 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
             ])),
-            ('cr', np.array([
+            (CR, np.array([
                 [[17, -1, 0, 0, 0, 0, 0, 0],
                  [-1, 1, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0],
@@ -141,200 +143,228 @@ class TestEncoder(unittest.TestCase):
                  [0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 0, 0, 0, 0, 0, 0, 0]]
             ]))
-        ))
-        expect = {
-            LUMINANCE: [
+        )
+        expects = (
+            [
                 (0, 1), (0, 1), (3, -1), EOB,
                 (0, 1), (0, 1), (3, -1), ZRL, ZRL, ZRL, (8, -99), EOB
             ],
-            CHROMINANCE: [
-                (1, 1), ZRL, (0, 99), EOB,
-                (0, -1), (0, -1), (1, 1), EOB
-            ]
-        }
-        self.assertDictEqual(Encoder(data).run_length_ac, expect)
+            [(1, 1), ZRL, (0, 99), EOB],
+            [(0, -1), (0, -1), (1, 1), EOB]
+        )
+        for (layer, data), expect in zip(test_inputs, expects):
+            self.assertSequenceEqual(
+                Encoder(data, layer).run_length_ac,
+                expect
+            )
 
-    def test_encode(self):
-        test_diff_dc = {
-            LUMINANCE: (63, 2, -7, 3),
-            CHROMINANCE: (15, 7)
-        }
-        test_run_length_ac = {
-            LUMINANCE: [
-                (0, -1), (2, -1), (0, 2), EOB,
-                (1, -2), ZRL, (1, -1), EOB,
-                (2, -1), ZRL, (0, -1), EOB,
-                ZRL, ZRL, (1, 1), EOB
-            ],
-            CHROMINANCE: [
-                (0, 1), ZRL, ZRL, (2, -1), EOB,
-                EOB
-            ]
-        }
+    def test_encode_luminance(self):
+        test_diff_dc = (63, 2, -7, 3)
+        test_run_length_ac = [
+            (0, -1), (2, -1), (0, 2), EOB,
+            (1, -2), ZRL, (1, -1), EOB,
+            (2, -1), ZRL, (0, -1), EOB,
+            ZRL, ZRL, (1, 1), EOB
+        ]
         expect = {
-            DC: {
-                LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
-                CHROMINANCE: '11101111 110111'.replace(' ', '')
-            },
-            AC: {
-                LUMINANCE: ''.join((
-                    '000', '111000', '0110', '1010',
-                    '1101101', '11111111001', '11000', '1010',
-                    '111000', '11111111001', '000', '1010',
-                    '11111111001', '11111111001', '11001', '1010'
-                )),
-                CHROMINANCE: ''.join((
-                    '011', '1111111010', '1111111010', '110100', '00',
-                    '00'
-                ))
-            }
+            DC: '1110111111 01110 100000 01111'.replace(' ', ''),
+            AC: ''.join((
+                '000', '111000', '0110', '1010',
+                '1101101', '11111111001', '11000', '1010',
+                '111000', '11111111001', '000', '1010',
+                '11111111001', '11111111001', '11001', '1010'
+            ))
         }
-        with mock.patch.object(Encoder, '__init__') as mock_Encoder_init:
-            mock_Encoder_init.return_value = None
-            encoder = Encoder(None)
-            encoder.diff_dc = test_diff_dc
-            encoder.run_length_ac = test_run_length_ac
-            self.assertDictEqual(encoder.encode(), expect)
+        encoder = Encoder(None, LUMINANCE)
+        encoder.diff_dc = test_diff_dc
+        encoder.run_length_ac = test_run_length_ac
+        self.assertDictEqual(encoder.encode(), expect)
+
+    def test_encode_chrominance(self):
+        test_diff_dc = (15, 7)
+        test_run_length_ac = [
+            (0, 1), ZRL, ZRL, (2, -1), EOB,
+            EOB
+        ]
+        expect = {
+            DC: '11101111 110111'.replace(' ', ''),
+            AC: ''.join((
+                '011', '1111111010', '1111111010', '110100', '00',
+                '00'
+            ))
+        }
+        encoder = Encoder(None, CHROMINANCE)
+        encoder.diff_dc = test_diff_dc
+        encoder.run_length_ac = test_run_length_ac
+        self.assertDictEqual(encoder.encode(), expect)
 
 
 class TestDecoder(unittest.TestCase):
     def test_dc(self):
-        test_instance = Decoder({
-            DC: {
-                LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
-                CHROMINANCE: '11101111 110111'.replace(' ', '')
-            },
-            AC: {
-                LUMINANCE: ''.join((
+        test_instances = (
+            Decoder({
+                DC: '1110111111 01110 100000 01111'.replace(' ', ''),
+                AC: ''.join((
                     '000', '111000', '0110', '1010',
                     '1101101', '11111111001', '11000', '1010',
                     '111000', '11111111001', '000', '1010',
                     '11111111001', '11111111001', '11001', '1010'
-                )),
-                CHROMINANCE: ''.join((
+                ))
+            }, LUMINANCE),
+            Decoder({
+                DC: '11101111 110111'.replace(' ', ''),
+                AC: ''.join((
                     '011', '1111111010', '1111111010', '110100', '00',
                     '00'
                 ))
-            }
-        })
-        expect = {
-            LUMINANCE: (63, 65, 58, 61),
-            CHROMINANCE: (15, 22)
-        }
-        self.assertDictEqual(test_instance.dc, expect)
+            }, CHROMINANCE))
+        expects = (
+            (63, 65, 58, 61),
+            (15, 22)
+        )
+        for instance, expect in zip(test_instances, expects):
+            self.assertSequenceEqual(instance.dc, expect)
 
     def test_ac(self):
-        test_instance = Decoder({
-            DC: {
-                LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
-                CHROMINANCE: '11101111 110111'.replace(' ', '')
-            },
-            AC: {
-                LUMINANCE: ''.join((
+        test_instances = (
+            Decoder({
+                DC: '1110111111 01110 100000 01111'.replace(' ', ''),
+                AC: ''.join((
                     '000', '111000', '0110', '1010',
                     '1101101', '11111111001', '11000', '1010',
                     '111000', '11111111001', '000', '1010',
                     '11111111001', '11111111001', '11001', '1010'
-                )),
-                CHROMINANCE: ''.join((
+                ))
+            }, LUMINANCE),
+            Decoder({
+                DC: '11101111 110111'.replace(' ', ''),
+                AC: ''.join((
                     '011', '1111111010', '1111111010', '110100', '00',
                     '00'
                 ))
-            }
-        })
-        expect = {
-            LUMINANCE: (
+            }, CHROMINANCE))
+        expects = (
+            (
                 (-1, 0, 0, -1, 2),
                 (0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
                 (0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
                 (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
             ),
-            CHROMINANCE: (
+            (
                 (1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
                 ()
             )
-        }
-        self.assertDictEqual(test_instance.ac, expect)
+        )
+        for instance, expect in zip(test_instances, expects):
+            self.assertSequenceEqual(instance.ac, expect)
 
-    def test_decode(self):
+    def test_decode_luminance(self):
         test_instance = Decoder({
-            DC: {
-                LUMINANCE: '1110111111 01110 100000 01111'.replace(' ', ''),
-                CHROMINANCE: '11101111 110111'.replace(' ', '')
-            },
-            AC: {
-                LUMINANCE: ''.join((
-                    '000', '111000', '0110', '1010',
-                    '1101101', '11111111001', '11000', '1010',
-                    '111000', '11111111001', '000', '1010',
-                    '11111111001', '11111111001', '11001', '1010'
-                )),
-                CHROMINANCE: ''.join((
-                    '011', '1111111010', '1111111010', '110100', '00',
-                    '00'
-                ))
-            }
-        })
-        expect = collections.OrderedDict((
-            ('y', np.array([
-                [[63, -1, 2, 0, 0, 0, 0, 0],
-                 [0, -1, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0]],
-                [[65, 0, 0, 0, 0, 0, 0, 0],
-                 [-2, 0, 0, 0, 0, 0, 0, 0],
-                 [0,  0, 0, 0, 0, 0, 0, 0],
-                 [0,  0, 0, 0, 0, 0, 0, 0],
-                 [0,  0, 0, 0, 0, 0, 0, 0],
-                 [-1,  0, 0, 0, 0, 0, 0, 0],
-                 [0,  0, 0, 0, 0, 0, 0, 0],
-                 [0,  0, 0, 0, 0, 0, 0, 0]],
-                [[58, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [-1, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [-1, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0]],
-                [[61, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 1, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0]]
-            ])),
-            ('cb', np.array([
-                [[15, 1, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, -1, 0, 0, 0, 0, 0, 0]]
-            ])),
-            ('cr', np.array([
-                [[22, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0],
-                 [0, 0, 0, 0, 0, 0, 0, 0]]
-            ]))
-        ))
-        for x, y in zip(test_instance.decode().values(), expect.values()):
-            np.testing.assert_array_equal(x, y)
+            DC: '1110111111 01110 100000 01111'.replace(' ', ''),
+            AC: ''.join((
+                '000', '111000', '0110', '1010',
+                '1101101', '11111111001', '11000', '1010',
+                '111000', '11111111001', '000', '1010',
+                '11111111001', '11111111001', '11001', '1010'
+            ))
+        }, LUMINANCE)
+        expect = np.array([
+            [[63, -1, 2, 0, 0, 0, 0, 0],
+             [0, -1, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0]],
+            [[65, 0, 0, 0, 0, 0, 0, 0],
+             [-2, 0, 0, 0, 0, 0, 0, 0],
+             [0,  0, 0, 0, 0, 0, 0, 0],
+             [0,  0, 0, 0, 0, 0, 0, 0],
+             [0,  0, 0, 0, 0, 0, 0, 0],
+             [-1,  0, 0, 0, 0, 0, 0, 0],
+             [0,  0, 0, 0, 0, 0, 0, 0],
+             [0,  0, 0, 0, 0, 0, 0, 0]],
+            [[58, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [-1, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [-1, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0]],
+            [[61, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0]]
+        ])
+        np.testing.assert_array_equal(test_instance.decode(), expect)
+
+    def test_decode_chrominance(self):
+        test_instance = Decoder({
+            DC: '11101111 110111'.replace(' ', ''),
+            AC: ''.join((
+                '011', '1111111010', '1111111010', '110100', '00',
+                '00'
+            ))
+        }, CHROMINANCE)
+        expect = np.array([
+            [[15, 1, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, -1, 0, 0, 0, 0, 0, 0]],
+            [[22, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0],
+             [0, 0, 0, 0, 0, 0, 0, 0]]
+        ])
+        np.testing.assert_array_equal(test_instance.decode(), expect)
+
+    def test_decode_chrominance_cannot_divided_evenly_by_2(self):
+        test_input_dc = {
+            DC: '11101111 110111 11101111'.replace(' ', ''),
+            AC: ''.join((
+                '011', '1111111010', '1111111010', '110100', '00',
+                '00'
+            ))
+        }
+        with self.assertRaises(ValueError):
+            Decoder(test_input_dc, CHROMINANCE).decode()
+        test_input_ac = {
+            DC: '11101111 110111'.replace(' ', ''),
+            AC: ''.join((
+                '011', '1111111010', '1111111010', '110100', '00',
+                '00',
+                '011', '00'
+            ))
+        }
+        with self.assertRaises(ValueError):
+            Decoder(test_input_ac, CHROMINANCE).decode()
+
+    def test_decode_lengths_of_dc_ac_not_equal(self):
+        test_input = {
+            DC: '11101111 110111 11101111 110111'.replace(' ', ''),
+            AC: ''.join((
+                '011', '1111111010', '1111111010', '110100', '00',
+                '00'
+            ))
+        }
+        with self.assertRaises(ValueError):
+            Decoder(test_input, CHROMINANCE).decode()
 
 
 class TestHuffmanCoding(unittest.TestCase):
@@ -543,18 +573,18 @@ class TestDifferentialCoding(unittest.TestCase):
     def test_differential_encode(self):
         test_input = np.linspace(-128, 127, 10, dtype=int)
         expect = [-128, 29, 28, 28, 29, 27, 29, 28, 28, 29]
-        self.assertSequenceEqual(encode_differential(test_input), expect)
+        self.assertSequenceEqual(list(encode_differential(test_input)), expect)
 
     def test_differential_decode(self):
         test_input = [-128, 29, 28, 28, 29, 27, 29, 28, 28, 29]
         expect = np.linspace(-128, 127, 10, dtype=int).tolist()
-        self.assertSequenceEqual(decode_differential(test_input), expect)
+        self.assertSequenceEqual(list(decode_differential(test_input)), expect)
 
     def test_invertible(self):
         test_input = np.linspace(-128, 127, 10, dtype=int).tolist()
         self.assertSequenceEqual(
             test_input,
-            decode_differential(encode_differential(test_input))
+            list(decode_differential(encode_differential(test_input)))
         )
 
 

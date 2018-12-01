@@ -1,3 +1,4 @@
+import collections
 import math
 
 from bitarray import bitarray, bits2bytes
@@ -6,7 +7,7 @@ from scipy.fftpack import dct
 
 from .codec import Encoder, Decoder, DC, AC, LUMINANCE, CHROMINANCE
 from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
-                    block_combine, dct2d, idct2d, quantize)
+                    block_combine, dct2d, idct2d, quantize, Y, CB, CR)
 
 
 #############################################################
@@ -79,11 +80,20 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
             # Rounding
             data[key] = np.rint(data[key]).astype(int)
         # Entropy Encoder
-        encoded = Encoder(data).encode()
+        encoded = {
+            LUMINANCE: Encoder(data[Y], LUMINANCE).encode(),
+            CHROMINANCE: Encoder(
+                np.vstack((data[CB], data[CR])),
+                CHROMINANCE
+            ).encode()
+        }
 
-        # Combine data as binary.
-        bits = bitarray(''.join(d for c in encoded.values()
-                                for d in c.values()))
+        # Combine data as binary in the order:
+        #   LUMINANCE.DC, LUMINANCE.AC, CHROMINANCE.DC, CHROMINANCE.AC
+        bits = bitarray(''.join((
+            encoded[LUMINANCE][DC], encoded[LUMINANCE][AC],
+            encoded[CHROMINANCE][DC], encoded[CHROMINANCE][AC]
+        )))
         return {
             'data': bits,
             'header': {
@@ -95,12 +105,12 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
                 # byte.
                 'remaining_bits_length': bits2bytes(len(bits)) * 8 - len(bits),
                 # The order of data slice lengths is:
-                #   (DC.LUM, DC.CHR, AC.LUM, AC.CHR)
+                #   LUMINANCE.DC, LUMINANCE.AC, CHROMINANCE.DC, CHROMINANCE.AC
                 'data_slice_lengths': (
-                    len(encoded[DC][LUMINANCE]),
-                    len(encoded[DC][CHROMINANCE]),
-                    len(encoded[AC][LUMINANCE]),
-                    len(encoded[AC][CHROMINANCE])
+                    len(encoded[LUMINANCE][DC]),
+                    len(encoded[LUMINANCE][AC]),
+                    len(encoded[CHROMINANCE][DC]),
+                    len(encoded[CHROMINANCE][AC])
                 )
             }
         }
@@ -187,26 +197,28 @@ def extract(byte_seq, header):
         # Preprocessing Byte Sequence:
         #   1. Remove Remaining (Fake Filled) Bits.
         #   2. Slice Bits into Dictionary Data Structure for `Decoder`.
-        #   data_slice_lengths = (DC.LUM, DC.CHR, AC.LUM, AC.CHR)
+
+        # The order of dsls is:
+        #   LUMINANCE.DC, LUMINANCE.AC, CHROMINANCE.DC, CHROMINANCE.AC
         bits = bits[:-remaining_bits_length]
         data = {
-            DC: {
-                LUMINANCE: bits[:dsls[0]],
-                CHROMINANCE: bits[dsls[0]:dsls[0] + dsls[1]]
+            LUMINANCE: {
+                DC: bits[:dsls[0]],
+                AC: bits[dsls[0]:dsls[0] + dsls[1]]
             },
-            AC: {
-                LUMINANCE: bits[dsls[0] + dsls[1]:dsls[0] + dsls[1] + dsls[2]],
-                CHROMINANCE: bits[dsls[0] + dsls[1] + dsls[2]:]
+            CHROMINANCE: {
+                DC: bits[dsls[0] + dsls[1]:dsls[0] + dsls[1] + dsls[2]],
+                AC: bits[dsls[0] + dsls[1] + dsls[2]:]
             }
         }
 
-        data = Decoder(data).decode()
-        #   The decoded data having the following format:
-        #   data = {
-        #       'y': array_of_blocks,
-        #       'cb': array_of_blocks,
-        #       'cr': array_of_blocks
-        #   }
+        # Huffman Decoding
+        cb, cr = np.split(Decoder(data[CHROMINANCE], CHROMINANCE).decode(), 2)
+        data = {
+            Y: Decoder(data[LUMINANCE], LUMINANCE).decode(),
+            CB: cb,
+            CR: cr
+        }
 
         for key, layer in data.items():
             for idx, block in enumerate(layer):
@@ -246,8 +258,8 @@ def extract(byte_seq, header):
         data = ycbcr2rgb(**data)
 
         # Rounding, Clipping and Flatten
-        data = {k: np.rint(np.clip(v, 0, 255)).flatten()
-                for k, v in data.items()}
+        for k, v in data.items():
+            data[k] = np.rint(np.clip(v, 0, 255)).flatten()
 
         # Combine layers into signle raw data.
         data = (np.dstack((data.values()))
@@ -258,6 +270,7 @@ def extract(byte_seq, header):
         #   Only LUMINANCE encoding table is used.
         #   data_slice_lengths = (DC: int, AC: int)
         raise NotImplementedError()
+
     return data
 
 

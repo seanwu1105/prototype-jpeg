@@ -6,33 +6,34 @@ import operator
 from bidict import bidict
 import numpy as np
 
+from .utils import Y, CB, CR
+
 
 EOB = (0, 0)
 ZRL = (15, 0)
 DC = 'DC'
 AC = 'AC'
-LUMINANCE = 'luminance'
-CHROMINANCE = 'chrominance'
+LUMINANCE = frozenset({Y})
+CHROMINANCE = frozenset({CB, CR})
 
 
 class Encoder:
-    def __init__(self, data):
-        # Append 'cr' to 'cb' to make them as 'luminance'. Thus, `self.data`
-        # would be:
-        # dict {
-        #   LUMINANCE: (y),
-        #   CHROMINANCE: (cb)(cr)
-        # }
-        self.data = {
-            LUMINANCE: data['y'],
-            CHROMINANCE: np.vstack((data['cb'], data['cr']))
-        }
+    def __init__(self, data, layer_type):
+        """Create a encoder based on baseline JPEG Huffman table.
+        
+        Arguments:
+            data {dict} -- The luminance and chrominance data in following
+                format.
+                {DC: '..010..', AC: '..010..', }
+            layer_type {LUMINANCE or CHROMINANCE} -- Specify the layer type of
+                data.
+        """
 
-        # The differential DC in blocks order: 'y', 'cb', 'cr'.
+        self.data = data
+        self.layer_type = layer_type
+        # List containing differential DCs for multiple blocks.
         self._diff_dc = None
-
-        # The run-length-encoded AC in blocks order: 'y', 'cb', 'cr'. Every
-        # sublist is the run-length-encoded AC of one block.
+        # List containing run-length-encoding AC pairs for multiple blocks.
         self._run_length_ac = None
 
     @property
@@ -57,103 +58,72 @@ class Encoder:
 
     def encode(self):
         """Encode differential DC and run-length-encoded AC with baseline JPEG
-        Huffman table.
+        Huffman table based on `self.layer_type`.
 
         Returns:
-            dict -- A dictionary containing DC and AC with luminance and
-                chrominance encoded layers. The format is:
+            dict -- A dictionary containing encoded DC and AC. The format is:
                 ```
-                ret = {
-                    DC: {LUMINANCE: '01...', CHROMINANCE: '01...'},
-                    AC: {LUMINANCE: '01...', CHROMINANCE: '01...'}
-                }
+                ret = {DC: '01...', AC: '01...'}
                 ```
         """
 
-        ret = {DC: {}, AC: {}}
-        for layer_type in (LUMINANCE, CHROMINANCE):
-            ret[DC][layer_type] = ''.join(encode_huffman(v, layer_type)
-                                          for v in self.diff_dc[layer_type])
-            ret[AC][layer_type] = ''.join(
-                encode_huffman(v, layer_type)
-                for v in self.run_length_ac[layer_type]
-            )
+        ret = {}
+        ret[DC] = ''.join(encode_huffman(v, self.layer_type)
+                          for v in self.diff_dc)
+        ret[AC] = ''.join(encode_huffman(v, self.layer_type)
+                          for v in self.run_length_ac)
         return ret
 
     def _get_diff_dc(self):
-        """Calculate the differential DC in the following format.
-        self._diff_dc = {
-            LUMINANCE: (tuple of integers),
-            CHROMINANCE: (tuple of intergers)
-        }
-        """
-
-        self._diff_dc = {k: encode_differential(l[:, 0, 0])
-                         for k, l in self.data.items()}
+        """Calculate the differential DC of given data."""
+        self._diff_dc = tuple(encode_differential(self.data[:, 0, 0]))
 
     def _get_run_length_ac(self):
-        """Calculate the run-length-encoded AC in the following format.
-        self._run_length_ac = {
-            LUMINANCE: (list of integers),
-            CHROMINANCE: (list of integers)
-        }
-        """
-
-        self._run_length_ac = {}
-        for key, layer in self.data.items():
-            seq = []
-            for block in layer:
-                seq.extend(encode_run_length(list(iter_zig_zag(block))[1:]))
-            self._run_length_ac[key] = seq
+        """Calculate the run-length-encoded AC of given data."""
+        self._run_length_ac = []
+        for block in self.data:
+            self._run_length_ac.extend(
+                encode_run_length(tuple(iter_zig_zag(block))[1:])
+            )
 
 
 class Decoder:
-    def __init__(self, data):
+    def __init__(self, data, layer_type):
         """Create a decoder based on baseline JPEG Huffman table.
 
         Arguments:
-            data {dict} -- A dictionary containing DC/AC luminance and
-                chrominance bit array as following format.
-                {
-                    DC: {LUMINANCE: '.01..', CHROMINANCE: '.01..'},
-                    AC: {LUMINANCE: '.01..', CHROMINANCE: '.01..'}
-                }
+            data {dict} -- A dictionary containing DC and AC bit string as
+                following format.
+                {DC: '.01..', AC: '.01..'}
+            layer_type {LUMINANCE or CHROMINANCE} -- Specify the layer type of
+                data.
         """
 
         self.data = data
+        self.layer_type = layer_type
 
-        # A dictionary containing all DC of blocks.
+        # A list containing all DC of blocks.
         self._dc = None
-        # A dictionary with nested 2D list containing all AC of blocks without
-        # zig-zag iteration.
+        # A nested 2D list containing all AC of blocks without zig-zag
+        # iteration.
         self._ac = None
 
     def decode(self):
-        if len(self.dc[CHROMINANCE]) % 2 or len(self.ac[CHROMINANCE]) % 2:
-            raise ValueError('The length of DC chrominance '
-                             f'{len(self.dc[CHROMINANCE])} or AC chrominance '
-                             f'{len(self.ac[CHROMINANCE])} cannot be divided '
-                             'by 2 evenly to seperate into Cb and Cr.')
+        if (self.layer_type == CHROMINANCE
+                and (len(self.dc) % 2 or len(self.ac) % 2)):
+            raise ValueError(f'The length of DC chrominance {len(self.dc)} '
+                             f'or AC chrominance {len(self.ac)} cannot be '
+                             'divided by 2 evenly to seperate into Cb and Cr.')
 
         shaped = {}
-        for layer in (LUMINANCE, CHROMINANCE):
-            if len(self.dc[layer]) != len(self.ac[layer]):
-                raise ValueError(f'DC {layer} size {len(self.dc[layer])} is not'
-                                 f' equal to AC {layer} size '
-                                 f'{len(self.ac[layer])}.')
+        if len(self.dc) != len(self.ac):
+            raise ValueError(f'DC size {len(self.dc)} is not equal to AC size '
+                             f'{len(self.ac)}.')
 
-            shaped[layer] = np.array(tuple(
-                inverse_iter_zig_zag((dc, ) + ac, size=8)
-                for dc, ac in zip(self.dc[layer], self.ac[layer])
-            ))
+        shaped = np.array(tuple(inverse_iter_zig_zag((dc, ) + ac, size=8)
+                                for dc, ac in zip(self.dc, self.ac)))
 
-        cb, cr = np.split(shaped[CHROMINANCE], 2)
-
-        return collections.OrderedDict((
-            ('y', shaped[LUMINANCE]),
-            ('cb', cb),
-            ('cr', cr),
-        ))
+        return shaped
 
     @property
     def dc(self):
@@ -168,10 +138,11 @@ class Decoder:
         return self._ac
 
     def _get_dc(self):
-        self._dc = {
-            layer: decode_differential(decode_huffman(value, DC, layer))
-            for layer, value in self.data[DC].items()
-        }
+        self._dc = tuple(decode_differential(decode_huffman(
+            self.data[DC],
+            DC,
+            self.layer_type
+        )))
 
     def _get_ac(self):
         def isplit(iterable, splitter):
@@ -182,12 +153,10 @@ class Decoder:
                     yield ret
                     ret = []
 
-        self._ac = {}
-        for layer, value in self.data[AC].items():
-            self._ac[layer] = tuple(
-                decode_run_length(pairs)
-                for pairs in isplit(decode_huffman(value, AC, layer), EOB)
-            )
+        self._ac = tuple(decode_run_length(pairs) for pairs in isplit(
+            decode_huffman(self.data[AC], AC, self.layer_type),
+            EOB
+        ))
 
 
 def encode_huffman(value, layer_type):
@@ -195,8 +164,8 @@ def encode_huffman(value, layer_type):
 
     Arguments:
         value {int or tuple} -- Differential DC (int) or run-length AC (tuple).
-        layer_type {LUMINANCE or CHROMINANCE} -- Specify the table of certain
-            layer.
+        layer_type {LUMINANCE or CHROMINANCE} -- Specify the layer type of
+            value.
 
     Raises:
         ValueError -- When the value is out of the range.
@@ -247,7 +216,7 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
     Arguments:
         bit_seq {str} -- The encoded bit sequence.
         dc_ac {DC or AC} -- The type of current.
-        layer_type {LUMINANCE or CHROMINANCE} -- The type of color space.
+        layer_type {LUMINANCE or CHROMINANCE} -- The layer type of bit sequence.
 
     Raises:
         IndexError -- When there is not enough bits in bit sequence to decode
@@ -261,15 +230,14 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
     """
 
     def diff_value(idx, size):
-        if idx >= bit_len or idx + size > bit_len:
-            raise IndexError('There is not enough bits to '
-                             'decode DIFF value codeword.')
+        if idx >= len(bit_seq) or idx + size > len(bit_seq):
+            raise IndexError('There is not enough bits to decode DIFF value '
+                             'codeword.')
         fixed = bit_seq[idx:idx + size]
         return int(fixed, 2)
 
-    bit_len = len(bit_seq)
     current_idx = 0
-    while current_idx < bit_len:
+    while current_idx < len(bit_seq):
         #   1. Consume next 16 bits as `current_slice`.
         #   2. Try to find the `current_slice` in Huffman table.
         #   3. If found, yield the corresponding key and go to step 4.
@@ -277,7 +245,7 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
         #      step 2.
         #   4. Consume next n bits, where n is the category (size) in returned
         #      key yielded in step 3. Use those info to decode the data.
-        remaining_len = bit_len - current_idx
+        remaining_len = len(bit_seq) - current_idx
         current_slice = bit_seq[
             current_idx:
             current_idx + (16 if remaining_len > 16 else remaining_len)
@@ -288,7 +256,7 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
                     HUFFMAN_CATEGORY_CODEWORD[dc_ac][layer_type].inv):
                 key = (HUFFMAN_CATEGORY_CODEWORD[dc_ac][layer_type]
                        .inv[current_slice])
-                if dc_ac == DC:
+                if dc_ac == DC:  # DC
                     size = key
                     if size == 0:
                         yield 0
@@ -318,14 +286,14 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
 
 
 def encode_differential(seq):
-    return tuple(
+    return (
         (item - seq[idx - 1]) if idx else item
         for idx, item in enumerate(seq)
     )
 
 
 def decode_differential(seq):
-    return tuple(itertools.accumulate(seq))
+    return itertools.accumulate(seq)
 
 
 def encode_run_length(seq):

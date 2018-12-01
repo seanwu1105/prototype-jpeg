@@ -4,6 +4,10 @@ import numpy as np
 from scipy.fftpack import dct, idct
 
 
+R, G, B = 'r', 'g', 'b'
+Y, CB, CR = 'y', 'cb', 'cr'
+
+
 def rgb2ycbcr(r, g, b):
     """Convert RGB to YCbCr.
 
@@ -20,9 +24,9 @@ def rgb2ycbcr(r, g, b):
     """
 
     return collections.OrderedDict((
-        ('y', + 0.299 * r + 0.587 * g + 0.114 * b),
-        ('cb', - 0.168736 * r - 0.331264 * g + 0.5 * b),
-        ('cr', + 0.5 * r - 0.418688 * g - 0.081312 * b)
+        (Y, + 0.299 * r + 0.587 * g + 0.114 * b),
+        (CB, - 0.168736 * r - 0.331264 * g + 0.5 * b),
+        (CR, + 0.5 * r - 0.418688 * g - 0.081312 * b)
     ))
 
 
@@ -42,9 +46,9 @@ def ycbcr2rgb(y, cb, cr):
     """
 
     return collections.OrderedDict((
-        ('r', y + 1.402 * cr),
-        ('g', y - 0.344136 * cb - 0.714136 * cr),
-        ('b', y + 1.772 * cb)
+        (R, y + 1.402 * cr),
+        (G, y - 0.344136 * cb - 0.714136 * cr),
+        (B, y + 1.772 * cb)
     ))
 
 
@@ -132,9 +136,9 @@ def idct2d(arr):
 
 
 def quantize(block, block_type, quality=50, inverse=False):
-    if block_type == 'y':
+    if block_type == Y:
         quantization_table = LUMINANCE_QUANTIZATION_TABLE
-    else:
+    else:  # Cb or Cr (LUMINANCE)
         quantization_table = CHROMINANCE_QUANTIZATION_TABLE
     factor = 5000 / quality if quality < 50 else 200 - 2 * quality
     if inverse:
