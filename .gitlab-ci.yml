@@ -8,11 +8,6 @@ nose2:
     - python3 -m pip install nose2
     - nose2 -v --with-coverage
 
-pytest:
-  script:
-    - python3 -m pip install pytest
-    - python3 -m pytest -v
-
 pylint:
   script:
     - python3 -m pip install pylint
