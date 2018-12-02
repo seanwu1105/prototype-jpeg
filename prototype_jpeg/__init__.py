@@ -1,4 +1,7 @@
+import logging
 import math
+import os
+import time
 
 from bitarray import bitarray, bits2bytes
 import numpy as np
@@ -23,21 +26,16 @@ from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
 #       Write Header                                        #
 #############################################################
 
-# Header:
-#   Image Size
-#       - Get info about how many rows and cols are padded to 8N * 8N for
-#         extraction
-#   Is Grey Level
-#   Subsampling Mode (This cannot be identified by image size as padding
-#       process increase the possibilities)
-#   Quality Factor
 
+def compress(f, size, quality=50, grey_level=False, subsampling_mode=1):
+    start_time = time.perf_counter()
+    logging.getLogger(__name__).info('Original file size: '
+                                     f'{os.fstat(f.fileno()).st_size} Bytes')
 
-def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
     if quality <= 0 or quality > 95:
         raise ValueError('Quality should within (0, 95].')
 
-    img_arr = np.fromfile(byte_seq, dtype=np.uint8).reshape(
+    img_arr = np.fromfile(f, dtype=np.uint8).reshape(
         size if grey_level else (*size, 3)
     )
 
@@ -105,6 +103,10 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
                  encoded[CHROMINANCE][DC], encoded[CHROMINANCE][AC])
 
     bits = bitarray(''.join(order))
+
+    logging.getLogger(__name__).info(
+        'Time elapsed: %.4f seconds' % (time.perf_counter() - start_time)
+    )
     return {
         'data': bits,
         'header': {
@@ -120,14 +122,18 @@ def compress(byte_seq, size, quality=50, grey_level=False, subsampling_mode=1):
     }
 
 
-def extract(byte_seq, header):
+def extract(f, header):
     def school_round(val):
         if float(val) % 1 >= 0.5:
             return math.ceil(val)
         return round(val)
 
+    start_time = time.perf_counter()
+    logging.getLogger(__name__).info('Compressed file size: '
+                                     f'{os.fstat(f.fileno()).st_size} Bytes')
+
     bits = bitarray()
-    bits.fromfile(byte_seq)
+    bits.fromfile(f)
     bits = bits.to01()
 
     # Read Header
@@ -231,6 +237,9 @@ def extract(byte_seq, header):
     for k, v in data.items():
         data[k] = np.rint(np.clip(v, 0, 255)).flatten()
 
+    logging.getLogger(__name__).info(
+        'Time elapsed: %.4f seconds' % (time.perf_counter() - start_time)
+    )
     # Combine layers into signle raw data.
     return (np.dstack((data.values()))
             .flatten()

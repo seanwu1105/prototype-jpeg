@@ -5,22 +5,22 @@ import numpy as np
 
 from prototype_jpeg.utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample,
                                   block_slice, block_combine, dct2d, idct2d,
-                                  quantize)
+                                  quantize, Y, CB, CR, R, G, B)
 
 
 class TestColorSpaceConversion(unittest.TestCase):
     def test_rgb2ycbcr(self):
         test_input = np.linspace(0, 255, 24, dtype=int).reshape(2, 4, 3)
         expect = collections.OrderedDict(((
-            'y', np.array([
+            Y, np.array([
                 [8.965, 41.965, 74.965, 107.965],
                 [141.965, 174.965, 207.965, 241.079]
             ])), (
-            'cb', np.array([
+            CB, np.array([
                 [7.356096, 7.356096, 7.356096, 7.356096],
                 [7.356096, 7.356096, 7.356096, 7.856096]
             ])), (
-            'cr', np.array([
+            CR, np.array([
                 [-6.394432, -6.394432, -6.394432, -6.394432],
                 [-6.394432, -6.394432, -6.394432, -6.475744]
             ])
@@ -32,15 +32,15 @@ class TestColorSpaceConversion(unittest.TestCase):
     def test_ycbcr2rgb(self):
         test_input = np.linspace(0, 255, 24).reshape(2, 4, 3)
         expect = collections.OrderedDict(((
-            'r', np.array([
+            R, np.array([
                 [31.08782609, 110.98043478, 190.87304348, 270.76565217],
                 [350.65826087, 430.55086957, 510.44347826, 590.33608696]
             ])), (
-            'g', np.array([
+            G, np.array([
                 [-19.65061043, -21.58878783, -23.52696522, -25.46514261],
                 [-27.40332, -29.34149739, -31.27967478, -33.21785217]
             ])), (
-            'b', np.array([
+            B, np.array([
                 [19.64608696, 111.84521739, 204.04434783, 296.24347826],
                 [388.4426087, 480.64173913, 572.84086957, 665.04]
             ])
@@ -275,7 +275,7 @@ class TestQuantization(unittest.TestCase):
         np.testing.assert_almost_equal(
             quantize(
                 test_input,
-                'y',
+                Y,
                 quality=50,
                 inverse=False
             ),
@@ -307,7 +307,7 @@ class TestQuantization(unittest.TestCase):
         np.testing.assert_almost_equal(
             quantize(
                 test_input,
-                'y',
+                Y,
                 quality=50,
                 inverse=True
             ),
@@ -329,7 +329,7 @@ class TestQuantization(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             test_input,
             quantize(
-                quantize(test_input, 'y', inverse=False),
-                'y', inverse=True
+                quantize(test_input, Y, inverse=False),
+                Y, inverse=True
             )
         )
