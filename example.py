@@ -60,7 +60,7 @@ def example():
             )
         with open('compressed.protojpg', 'wb') as compressed_file:
             compressed['data'].tofile(compressed_file)
-        header = compressed['header']
+        header = compressed['header']  # get compressed header (metadata)
 
         with open('compressed.protojpg', 'rb') as compressed_file:
             extracted = extract(
