@@ -121,6 +121,7 @@ nose2 -v --with-coverage tests
 The PSNR gets higher, compressing/extracting time elapsing gets longer and file size gets smaller with higher QF.
 
 ![analysis](https://i.imgur.com/Qsjm11x.png "analysis")
+> For further details, see [this report](https://docs.google.com/document/d/1psiuwJxcRnHfEcb9GTTmYd2JbMJ2z6h0kz8B4l03k_0/edit?usp=sharing).
 
 ## Algorithms and Implementation
 
