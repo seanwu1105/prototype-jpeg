@@ -211,7 +211,7 @@ If `QF < 0`, the quantization table would have negative elements.
 
 If there is an element smaller than `1` in quantization table, after the division in quantization process, the corresponding element in the result image block would become larger, which violates the goal of quantization. Assume `QF = 95`, `Q = S / 10`. The minimal element in `S` is `10`, which would be `1` in `Q` after the division, and if `QF > 95`, the minimal element in `Q` would be smaller than `1`. Thus, QF should always be smaller than or equal to `95`.
 
-### Baseline JPEG Huffman Table
+### Baseline JPEG Huffman Tables
 
 The baseline JPEG Huffman table could be found in [http://dirac.epucfe.eu](http://dirac.epucfe.eu/projets/wakka.php?wiki=P14AB08/download&file=P14AB08_JPEG_ALGORITH_BASELINE_ON_EMBEDDED_SYSTEMS.pdf), which has the same Huffman coding for DC and AC luminance, as well as DC chrominance in the class slides. However, that Huffman table also includes the AC chrominance coding, which could decrease the compressed file size significantly. You can find the complete table in `/prototype_jpeg/codec.py`.
 
