@@ -1,7 +1,7 @@
-# [Prototype JPEG](https://github.com/GLaDOS1105/prototype-jpeg)
+# [Prototype JPEG](https://github.com/seanwu1105/prototype-jpeg)
 
-[![pipeline status](https://gitlab.com/GLaDOS1105/prototype-jpeg/badges/master/pipeline.svg)](https://gitlab.com/GLaDOS1105/prototype-jpeg/commits/master)
-[![coverage report](https://gitlab.com/GLaDOS1105/prototype-jpeg/badges/master/coverage.svg)](https://gitlab.com/GLaDOS1105/prototype-jpeg/commits/master)
+[![pipeline status](https://gitlab.com/seanwu1105/prototype-jpeg/badges/master/pipeline.svg)](https://gitlab.com/seanwu1105/prototype-jpeg/commits/master)
+[![coverage report](https://gitlab.com/seanwu1105/prototype-jpeg/badges/master/coverage.svg)](https://gitlab.com/seanwu1105/prototype-jpeg/commits/master)
 
 A prototype JPEG compressor in Python.
 
@@ -14,7 +14,7 @@ A prototype JPEG compressor in Python.
 Clone this repositroy.
 
 ``` bash
-git clone https://github.com/GLaDOS1105/prototype-jpeg
+git clone https://github.com/seanwu1105/prototype-jpeg
 ```
 
 Open the root directory.
