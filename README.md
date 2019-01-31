@@ -2,6 +2,7 @@
 
 [![pipeline status](https://gitlab.com/seanwu1105/prototype-jpeg/badges/master/pipeline.svg)](https://gitlab.com/seanwu1105/prototype-jpeg/commits/master)
 [![coverage report](https://gitlab.com/seanwu1105/prototype-jpeg/badges/master/coverage.svg)](https://gitlab.com/seanwu1105/prototype-jpeg/commits/master)
+[![Requirements Status](https://requires.io/github/seanwu1105/prototype-jpeg/requirements.svg?branch=master)](https://requires.io/github/seanwu1105/prototype-jpeg/requirements/?branch=master)
 
 A prototype JPEG compressor in Python.
 
