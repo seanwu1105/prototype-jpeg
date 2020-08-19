@@ -1,7 +1,11 @@
 import tempfile
 import unittest
 
-from prototype_jpeg import compress, extract
+from prototype_jpeg import __version__, compress, extract
+
+
+def test_version():
+    assert __version__ == '0.1.0'
 
 
 class TestCompressAndExtract(unittest.TestCase):

@@ -10,6 +10,7 @@ from .codec import Encoder, Decoder, DC, AC, LUMINANCE, CHROMINANCE
 from .utils import (rgb2ycbcr, ycbcr2rgb, downsample, upsample, block_slice,
                     block_combine, dct2d, idct2d, quantize, Y, CB, CR)
 
+__version__ = '0.1.0'
 
 #############################################################
 # Compress Algorithm:                                       #
