@@ -38,7 +38,7 @@ def show_raw_images(images, sizes, titles=None, grey_level=False):
     plt.show()
 
 
-def rgb2ycbcr(r, g, b):
+def rgb2ycbcr(r, g, b):  # pylint: disable=invalid-name
     """Convert RGB to YCbCr.
 
     The range of R, G, B should be [0, 255]. The range of Y, Cb, Cr is [0, 255],
@@ -60,7 +60,7 @@ def rgb2ycbcr(r, g, b):
     ))
 
 
-def ycbcr2rgb(y, cb, cr):
+def ycbcr2rgb(y, cb, cr):  # pylint: disable=invalid-name
     """Convert YCbCr to RGB.
 
     The range of Y, Cb, Cr should be [0, 255], [-128, 127], [-128, 127]
@@ -129,10 +129,10 @@ def block_slice(arr, nrows, ncols):
     `reshape` will raise a `ValueError` if `nrows` or `ncols` doesn't evenly
     divide the shape.
     """
-    h, _ = arr.shape
+    h, _ = arr.shape  # pylint: disable=invalid-name
     return (arr.reshape(h//nrows, nrows, -1, ncols)
-               .swapaxes(1, 2)
-               .reshape(-1, nrows, ncols))
+            .swapaxes(1, 2)
+            .reshape(-1, nrows, ncols))
 
 
 def block_combine(arr, nrows, ncols):

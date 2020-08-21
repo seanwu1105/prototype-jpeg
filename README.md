@@ -8,6 +8,11 @@ A prototype JPEG compressor in Python.
 
 ## Get Started
 
+### Environment
+
+* Visual Studio Code
+* Poetry 1.0.10 or later
+
 ### Installation
 
 Clone this repositroy.
@@ -22,10 +27,10 @@ Open the root directory.
 cd prototype_jpeg
 ```
 
-Install the dependencies.
+Install the dependencies with Poetry.
 
 ``` bash
-pip install -r requirements.txt
+poetry install --no-root
 ```
 
 ### Uses

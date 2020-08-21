@@ -28,15 +28,16 @@ __version__ = '0.1.0'
 #############################################################
 
 
-def compress(f, size, quality=50, grey_level=False, subsampling_mode=1):
+def compress(file_object, size, quality=50, grey_level=False, subsampling_mode=1):  # pylint: disable=too-many-locals
     start_time = time.perf_counter()
-    logging.getLogger(__name__).info('Original file size: '
-                                     f'{os.fstat(f.fileno()).st_size} Bytes')
+    logging.getLogger(__name__).info(
+        'Original file size: %d Bytes', os.fstat(file_object.fileno()).st_size
+    )
 
     if quality <= 0 or quality > 95:
         raise ValueError('Quality should within (0, 95].')
 
-    img_arr = np.fromfile(f, dtype=np.uint8).reshape(
+    img_arr = np.fromfile(file_object, dtype=np.uint8).reshape(
         size if grey_level else (*size, 3)
     )
 
@@ -106,7 +107,7 @@ def compress(f, size, quality=50, grey_level=False, subsampling_mode=1):
     bits = bitarray(''.join(order))
 
     logging.getLogger(__name__).info(
-        'Time elapsed: %.4f seconds' % (time.perf_counter() - start_time)
+        'Time elapsed: %.4f seconds', (time.perf_counter() - start_time)
     )
     return {
         'data': bits,
@@ -123,18 +124,20 @@ def compress(f, size, quality=50, grey_level=False, subsampling_mode=1):
     }
 
 
-def extract(f, header):
+def extract(file_object, header):  # pylint: disable=too-many-branches, too-many-locals
     def school_round(val):
         if float(val) % 1 >= 0.5:
             return math.ceil(val)
         return round(val)
 
     start_time = time.perf_counter()
-    logging.getLogger(__name__).info('Compressed file size: '
-                                     f'{os.fstat(f.fileno()).st_size} Bytes')
+    logging.getLogger(__name__).info(
+        'Compressed file size: %d Bytes',
+        os.fstat(file_object.fileno()).st_size
+    )
 
     bits = bitarray()
-    bits.fromfile(f)
+    bits.fromfile(file_object)
     bits = bits.to01()
 
     # Read Header
@@ -186,7 +189,7 @@ def extract(f, header):
     if grey_level:
         data = {Y: Decoder(sliced, LUMINANCE).decode()}
     else:
-        cb, cr = np.split(Decoder(
+        cb, cr = np.split(Decoder(  # pylint: disable=invalid-name, unbalanced-tuple-unpacking
             sliced[CHROMINANCE],
             CHROMINANCE
         ).decode(), 2)
@@ -235,11 +238,11 @@ def extract(f, header):
         data = ycbcr2rgb(**data)
 
     # Rounding, Clipping and Flatten
-    for k, v in data.items():
+    for k, v in data.items():  # pylint: disable=invalid-name
         data[k] = np.rint(np.clip(v, 0, 255)).flatten()
 
     logging.getLogger(__name__).info(
-        'Time elapsed: %.4f seconds' % (time.perf_counter() - start_time)
+        'Time elapsed: %.4f seconds', (time.perf_counter() - start_time)
     )
     # Combine layers into signle raw data.
     return (np.dstack((data.values()))

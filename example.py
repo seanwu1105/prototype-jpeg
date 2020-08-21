@@ -76,7 +76,7 @@ def example():
             )
 
         logging.getLogger(__name__).info(
-            'PSNR: %.4f' % psnr(original, extracted)
+            'PSNR: %.4f', psnr(original, extracted)
         )
         show_raw_images(
             (original, extracted),

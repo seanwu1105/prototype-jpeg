@@ -18,7 +18,7 @@ CHROMINANCE = frozenset({CB, CR})
 class Encoder:
     def __init__(self, data, layer_type):
         """Create a encoder based on baseline JPEG Huffman table.
-        
+
         Arguments:
             data {dict} -- The luminance and chrominance data in following
                 format.
@@ -124,13 +124,13 @@ class Decoder:
         return shaped
 
     @property
-    def dc(self):
+    def dc(self):  # pylint: disable=invalid-name
         if self._dc is None:
             self._get_dc()
         return self._dc
 
     @property
-    def ac(self):
+    def ac(self):  # pylint: disable=invalid-name
         if self._ac is None:
             self._get_ac()
         return self._ac
@@ -191,21 +191,21 @@ def encode_huffman(value, layer_type):
             return HUFFMAN_CATEGORY_CODEWORD[DC][layer_type][size]
         return (HUFFMAN_CATEGORY_CODEWORD[DC][layer_type][size]
                 + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
-    else:   # AC
-        value = tuple(value)
-        if value == EOB or value == ZRL:
-            return HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][value]
+    # AC
+    value = tuple(value)
+    if value in (EOB, ZRL):
+        return HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][value]
 
-        run, nonzero = value
-        if nonzero == 0 or nonzero <= -1024 or nonzero >= 1024:
-            raise ValueError(
-                f'AC coefficient nonzero {value} should be within [-1023, 0) '
-                'or (0, 1023].'
-            )
+    run, nonzero = value
+    if nonzero == 0 or nonzero <= -1024 or nonzero >= 1024:
+        raise ValueError(
+            f'AC coefficient nonzero {value} should be within [-1023, 0) '
+            'or (0, 1023].'
+        )
 
-        size, fixed_code_idx = index_2d(HUFFMAN_CATEGORIES, nonzero)
-        return (HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][(run, size)]
-                + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
+    size, fixed_code_idx = index_2d(HUFFMAN_CATEGORIES, nonzero)
+    return (HUFFMAN_CATEGORY_CODEWORD[AC][layer_type][(run, size)]
+            + '{:0{padding}b}'.format(fixed_code_idx, padding=size))
 
 
 def decode_huffman(bit_seq, dc_ac, layer_type):
@@ -265,7 +265,7 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
                         )]
                 else:  # AC
                     run, size = key
-                    if key == EOB or key == ZRL:
+                    if key in (EOB, ZRL):
                         yield key
                     else:
                         yield (run, HUFFMAN_CATEGORIES[size][diff_value(
@@ -275,8 +275,7 @@ def decode_huffman(bit_seq, dc_ac, layer_type):
 
                 current_idx += len(current_slice) + size
                 break
-            else:
-                current_slice = current_slice[:-1]
+            current_slice = current_slice[:-1]
         else:
             raise KeyError(
                 f'Cannot find any prefix of {err_cache} in Huffman table.'
@@ -302,7 +301,7 @@ def encode_run_length(seq):
     if groups[-1][1] == 0:
         del groups[-1]
     for idx, (length, key) in enumerate(groups):
-        if borrow == True:
+        if borrow:
             length -= 1
             borrow = False
         if length == 0:
@@ -327,17 +326,21 @@ def decode_run_length(seq):
 def iter_zig_zag(data):
     if data.shape[0] != data.shape[1]:
         raise ValueError('The shape of input array should be square.')
-    x, y = 0, 0
+    x, y = 0, 0  # pylint: disable=invalid-name
     for _ in np.nditer(data):
         yield data[y][x]
         if (x + y) % 2 == 1:
-            x, y = move_zig_zag_idx(x, y, data.shape[0])
+            x, y = move_zig_zag_idx(  # pylint: disable=invalid-name
+                x, y, data.shape[0]
+            )
         else:
-            y, x = move_zig_zag_idx(y, x, data.shape[0])
+            y, x = move_zig_zag_idx(  # pylint: disable=invalid-name
+                y, x, data.shape[0]
+            )
 
 
 def inverse_iter_zig_zag(seq, size=None, fill=0):
-    def smallest_square_larger_than(value):
+    def smallest_square_larger_than(value):  # pylint: disable=inconsistent-return-statements
         for ret in itertools.count():
             if ret**2 >= value:
                 return ret
@@ -346,13 +349,13 @@ def inverse_iter_zig_zag(seq, size=None, fill=0):
         size = smallest_square_larger_than(len(seq))
     seq = tuple(seq) + (fill, ) * (size**2 - len(seq))
     ret = np.empty((size, size), dtype=int)
-    x, y = 0, 0
+    x, y = 0, 0  # pylint: disable=invalid-name
     for value in seq:
         ret[y][x] = value
         if (x + y) % 2 == 1:
-            x, y = move_zig_zag_idx(x, y, size)
+            x, y = move_zig_zag_idx(x, y, size)  # pylint: disable=invalid-name
         else:
-            y, x = move_zig_zag_idx(y, x, size)
+            y, x = move_zig_zag_idx(y, x, size)  # pylint: disable=invalid-name
     return ret
 
 

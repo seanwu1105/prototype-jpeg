@@ -2,16 +2,15 @@ import logging
 from matplotlib import pyplot as plt
 import numpy as np
 
-from prototype_jpeg import compress, extract
 from prototype_jpeg.utils import psnr
-from tests.test_integration import compress_and_extract
+from tests.test_prototype_jpeg import compress_and_extract
 
 logging.basicConfig(level=logging.INFO)
 
 
-def read_img(fn):
-    with open(fn, 'rb') as f:
-        ret = np.fromfile(f, dtype=np.uint8)
+def read_img(filename):
+    with open(filename, 'rb') as file_object:
+        ret = np.fromfile(file_object, dtype=np.uint8)
     return ret
 
 
