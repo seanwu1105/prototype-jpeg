@@ -1,5 +1,7 @@
 # [Prototype JPEG](https://github.com/seanwu1105/prototype-jpeg)
 
+[![build](https://github.com/seanwu1105/prototype-jpeg/workflows/build/badge.svg)](https://github.com/seanwu1105/prototype-jpeg/actions?query=workflow%3Abuild)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/6185820fa1df49f598ea274ae2c774f1)](https://www.codacy.com/manual/seanwu1105/prototype-jpeg?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=seanwu1105/prototype-jpeg&amp;utm_campaign=Badge_Grade)
 [![Requirements Status](https://requires.io/github/seanwu1105/prototype-jpeg/requirements.svg?branch=master)](https://requires.io/github/seanwu1105/prototype-jpeg/requirements/?branch=master)
 
 A prototype JPEG compressor in Python.
