@@ -10,7 +10,7 @@ numpy = "^1.19.1"
 scipy = "^1.5.2"
 matplotlib = "^3.3.1"
 bitarray = "^1.5.2"
-bidict = "^0.20.0"
+bidict = "^0.21.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.0"
