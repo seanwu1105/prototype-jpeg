@@ -51,19 +51,15 @@ category = "main"
 description = "The bidirectional mapping library for Python."
 name = "bidict"
 optional = false
-python-versions = ">=3"
-version = "0.20.0"
+python-versions = ">=3.6"
+version = "0.21.0"
 
 [package.extras]
-coverage = ["coverage (<5)", "pytest-cov (<3)"]
-dev = ["setuptools-scm", "Sphinx (<3)", "docutils (0.15.2)", "hypothesis (<5)", "py (<2)", "pytest (<6)", "pytest-benchmark (>=3.2.0,<4)", "sortedcollections (<2)", "sortedcontainers (<3)", "coverage (<5)", "pytest-cov (<3)", "flake8 (<3.8)", "pydocstyle (<3.1)", "pylint (2.4.3)", "astroid (2.3.2)", "pre-commit (<2)", "tox (<4)"]
-docs = ["Sphinx (<3)", "docutils (0.15.2)"]
-flake8 = ["flake8 (<3.8)"]
-lint = ["flake8 (<3.8)", "pydocstyle (<3.1)", "pylint (2.4.3)", "astroid (2.3.2)"]
-pydocstyle = ["pydocstyle (<3.1)"]
-pylint = ["pylint (2.4.3)", "astroid (2.3.2)"]
-sphinx = ["Sphinx (<3)", "docutils (0.15.2)"]
-test = ["hypothesis (<5)", "py (<2)", "pytest (<6)", "pytest-benchmark (>=3.2.0,<4)", "sortedcollections (<2)", "sortedcontainers (<3)", "Sphinx (<3)", "docutils (0.15.2)"]
+coverage = ["coverage (<6)", "pytest-cov (<3)"]
+dev = ["setuptools-scm", "hypothesis (<6)", "py (<2)", "pytest (<7)", "pytest-benchmark (>=3.2.0,<4)", "sortedcollections (<2)", "sortedcontainers (<3)", "Sphinx (<4)", "sphinx-autodoc-typehints (<2)", "coverage (<6)", "pytest-cov (<3)", "pre-commit (<3)", "tox (<4)"]
+docs = ["Sphinx (<4)", "sphinx-autodoc-typehints (<2)"]
+precommit = ["pre-commit (<3)"]
+test = ["hypothesis (<6)", "py (<2)", "pytest (<7)", "pytest-benchmark (>=3.2.0,<4)", "sortedcollections (<2)", "sortedcontainers (<3)", "Sphinx (<4)", "sphinx-autodoc-typehints (<2)"]
 
 [[package]]
 category = "main"
@@ -386,7 +382,7 @@ python-versions = "*"
 version = "1.12.1"
 
 [metadata]
-content-hash = "efb94696eb84e78596e66149c22d5b8d46d6cad58d6c70a1ceb16173d1d4f260"
+content-hash = "61e0a4f6b1e2e29d9520b8ee5161a94f7b21ffab39e2d87ea42ae54745a4a647"
 python-versions = "^3.8"
 
 [metadata.files]
@@ -406,8 +402,8 @@ autopep8 = [
     {file = "autopep8-1.5.4.tar.gz", hash = "sha256:d21d3901cb0da6ebd1e83fc9b0dfbde8b46afc2ede4fe32fbda0c7c6118ca094"},
 ]
 bidict = [
-    {file = "bidict-0.20.0-py2.py3-none-any.whl", hash = "sha256:c6ab879ccd5aaa5801efcd9e6280331e5f5cd2219913fcd086deaca8d76b9606"},
-    {file = "bidict-0.20.0.tar.gz", hash = "sha256:c1b1ce1c0f1e3457489672bc3a4db375a06f61ae7797a9eedf71ea788cea3870"},
+    {file = "bidict-0.21.0-py2.py3-none-any.whl", hash = "sha256:2ad89fc808433eee99039c15ec426651bef6fcf06cbf6f1ef1f38bc6eb13e6da"},
+    {file = "bidict-0.21.0.tar.gz", hash = "sha256:935bf93eda866d4f85fd796405e4e1e9b20274ce56c3ed65b7ce879935f757ad"},
 ]
 bitarray = [
     {file = "bitarray-1.5.2.tar.gz", hash = "sha256:38fe66d5f7720835703a07fe8d0a4b5eda87f692f3cf4fb01543407b79857edf"},
