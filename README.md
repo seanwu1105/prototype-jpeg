@@ -9,7 +9,7 @@ A prototype JPEG compressor in Python.
 
 ![preview](https://i.imgur.com/KwD7c1u.jpg "preview")
 
-## Get Started
+## Getting Started
 
 ### Environment
 
@@ -112,16 +112,8 @@ Compressing process would automatically generate the following 2 more items in t
 Use the following command to run unit and integrating tests.
 
 ``` bash
-nose2 -v --with-coverage tests
+pytest
 ```
-
-### Dependencies
-
-* [bidict](https://bidict.readthedocs.io/en/master/)
-* [bitarray](https://pypi.org/project/bitarray/)
-* [Matplotlib](https://matplotlib.org/)
-* [NumPy](http://www.numpy.org/)
-* [SciPy](https://www.scipy.org/)
 
 ## Compressed File Results
 
