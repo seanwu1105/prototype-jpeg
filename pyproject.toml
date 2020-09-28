@@ -13,7 +13,7 @@ bitarray = "^1.5.3"
 bidict = "^0.21.2"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.0"
+pytest = "^6.1"
 pylint = "^2.6.0"
 mypy = "^0.782"
 autopep8 = "^1.5.4"
