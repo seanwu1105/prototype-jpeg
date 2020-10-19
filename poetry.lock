@@ -62,7 +62,7 @@ test = ["hypothesis (<6)", "py (<2)", "pytest (<7)", "pytest-benchmark (>=3.2.0,
 
 [[package]]
 name = "bitarray"
-version = "1.5.3"
+version = "1.6.0"
 description = "efficient arrays of booleans -- C extension"
 category = "main"
 optional = false
@@ -373,7 +373,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "3758e38c2df97622864e6293d432c64de62ea8e4644b0418c29507c6ef967b82"
+content-hash = "c5c53fbf377f5594edbbde2e1558487ace8dbb14b7b39bd2c0ee7db8a57771f2"
 
 [metadata.files]
 astroid = [
@@ -396,7 +396,7 @@ bidict = [
     {file = "bidict-0.21.2.tar.gz", hash = "sha256:4fa46f7ff96dc244abfc437383d987404ae861df797e2fd5b190e233c302be09"},
 ]
 bitarray = [
-    {file = "bitarray-1.5.3.tar.gz", hash = "sha256:567631fc922b1c2c528c376795f18dcc0604d18702e0b8b50e8e35f0474214a5"},
+    {file = "bitarray-1.6.0.tar.gz", hash = "sha256:ba157ddebddc723fe021fc80595b3c70924d69ee58286b62bfca21da48edfc9d"},
 ]
 certifi = [
     {file = "certifi-2020.6.20-py2.py3-none-any.whl", hash = "sha256:8fc0819f1f30ba15bdb34cceffb9ef04d99f420f68eb75d901e9560b8749fc41"},
