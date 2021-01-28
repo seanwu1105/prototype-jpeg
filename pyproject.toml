@@ -8,7 +8,7 @@ authors = ["Sean Wu <seanwu1105@gmail.com>"]
 python = "^3.8"
 numpy = "^1.19.2"
 scipy = "^1.5.2"
-matplotlib = "^3.3.2"
+matplotlib = "^3.3.4"
 bitarray = "^1.5.3"
 bidict = "^0.21.2"
 
